@@ -1,7 +1,12 @@
-CREATE TABLE IF NOT EXISTS users (
-                                     id SERIAL PRIMARY KEY,
-                                     name VARCHAR(100),
-    email VARCHAR(150) UNIQUE
-    );
+DROP TABLE IF EXISTS users;
 
-INSERT INTO users (name, email) VALUES ('Alice', 'alice@example.com');
+CREATE TABLE users (
+                       id SERIAL PRIMARY KEY,
+                       name VARCHAR(100) NOT NULL,
+                       email VARCHAR(150) UNIQUE NOT NULL,
+                       password VARCHAR(255) NOT NULL
+);
+
+INSERT INTO users (name, email, password)
+VALUES ('Alice', 'alice@example.com', 'password123');
+
