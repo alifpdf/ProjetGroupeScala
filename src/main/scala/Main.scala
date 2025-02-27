@@ -1,5 +1,5 @@
+import akka.actor.ActorSystem
 import java.sql.DriverManager
-import java.sql.Connection
 import scala.io.Source
 
 object Main {
@@ -18,6 +18,11 @@ object Main {
       }
 
     }
+    implicit val system: ActorSystem = ActorSystem("MainSystem")
+    // Lancer le serveur WebSocket
+    val server = new WebSocketServer()(system)
+    server.start()
+
 
   }
 }
