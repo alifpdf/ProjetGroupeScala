@@ -1,6 +1,9 @@
 import akka.actor.ActorSystem
+import akka.stream.ActorMaterializer
+
 import java.sql.DriverManager
-import scala.io.Source
+import scala.concurrent.ExecutionContext
+import scala.io.{Source, StdIn}
 
 object Main {
 
@@ -19,9 +22,12 @@ object Main {
 
     }
     implicit val system: ActorSystem = ActorSystem("MainSystem")
-    // Lancer le serveur WebSocket
-    val server = new WebSocketServer()(system)
+    implicit val ec: ExecutionContext = system.dispatcher // Ajoute ExecutionContext
+
+    val server = new WebSocketServer()(system, ec) // Passe bien system et ec
+
     server.start()
+
 
 
   }

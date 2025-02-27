@@ -1,4 +1,3 @@
-
 import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.server.Directives._
@@ -7,23 +6,27 @@ import ch.megard.akka.http.cors.scaladsl.CorsDirectives.cors
 import scala.concurrent.ExecutionContext
 
 
+import AkkaStream._
 
-class WebSocketServer(implicit system: ActorSystem){
+class WebSocketServer(implicit system: ActorSystem, ec: ExecutionContext) {
 
 
-  // Route HTTP avec CORS activé
 
-  val route = cors() {
-    pathEndOrSingleSlash {
-      complete("Hello, World!")
-    }
+  // **3️⃣ Route WebSocket**
+  private val route = cors() {
+    concat(
+      pathEndOrSingleSlash {
+        complete("✅ Serveur WebSocket en cours d'exécution. Connectez-vous sur /ws")
+      },
+      path("ws") {
+        handleWebSocketMessages(websocketFlow())
+      }
+    )
   }
 
-  // Démarrer le serveur HTTP
+  // **4️⃣ Démarrer le serveur HTTP**
   def start(): Unit = {
-    val bindingFuture = Http().newServerAt("localhost", 8080).bind(route)
-    println("✅ Serveur HTTP lancé sur http://localhost:8080/")
+    Http().newServerAt("localhost", 8080).bind(route)
+    println("✅ Serveur WebSocket en écoute sur ws://localhost:8080/ws")
   }
-
-
 }
