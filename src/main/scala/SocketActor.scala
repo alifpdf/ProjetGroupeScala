@@ -8,7 +8,6 @@ object SocketActor {
   // Messages
   case class Connect(user: User, client: ActorRef)
   case class Disconnect(user: User)
-  case class PrivateMessage(from: User, to: User, msg: String)
   case class BroadcastMessage(msg: String)
 }
 
