@@ -20,15 +20,15 @@ class UtilisateurActor(dbService: DatabaseService) extends Actor {
   def receive: Receive = {
     case AddUtilisateur(name, email, password) =>
       val user = User(name, email, password)
-      val senderRef = sender() // Sauvegarde l'expéditeur du message
+
       dbService.addUser(user)
 
     case GetUtilisateur() =>
-      val senderRef = sender()
+
       dbService.getUsers
 
     case GetEmail(email) =>
-      val senderRef = sender()
+
       dbService.getEmail(email)
 
 
