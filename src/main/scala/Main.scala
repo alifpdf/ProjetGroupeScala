@@ -4,9 +4,9 @@ import java.sql.DriverManager
 import scala.io.Source
 import scala.sys.process._
 
-object Main {
+object Main extends App {
 
-  def main(args: Array[String]): Unit = {
+
     val url = "jdbc:postgresql://localhost:5432/postgres?user=postgres&password=1234"
 
     // 📌 Exécuter le script SQL
@@ -30,7 +30,7 @@ object Main {
 
     // 📌 Lancer `npm start` dans `frontend`
     startFrontend()
-  }
+
 
   // 📌 Fonction pour démarrer le frontend
   def startFrontend(): Unit = {

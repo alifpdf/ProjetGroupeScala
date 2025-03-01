@@ -8,7 +8,7 @@ import scala.util.Random
 object AkkaStream {
 
   def generateRandomNumberSource()(implicit system: ActorSystem, ec: ExecutionContext): Source[Message, Any] = {
-    Source.tick(1.second, 2.seconds, "").map { _ =>
+    Source.tick(1.second, 5.seconds, "").map { _ =>
       val randomNumber = Random.nextInt(100) // Nombre aléatoire entre 0 et 99
       TextMessage(s"$randomNumber") // Envoie le nombre en WebSocket
     }
