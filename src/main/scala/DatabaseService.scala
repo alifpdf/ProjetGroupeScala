@@ -9,6 +9,8 @@
 
   class UsersTable(tag: Tag) extends Table[User](tag,"users"){
 
+
+    def id = column[Int]("id", O.PrimaryKey, O.AutoInc)
     def name = column[String]("name")
     def email = column[String]("email")
     def motdepasse = column[String]("password")
@@ -33,6 +35,10 @@
           println(s"❌ Erreur SQL lors de l'ajout d'utilisateur : ${e.getMessage}")
           0
       }
+    }
+
+    def getId(email:String):Future[Int] = {
+      db.run(UsersTable.table.filter(_.email === email).map(_.id).result.headOption).map(_.getOrElse(0))
     }
 
 

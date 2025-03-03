@@ -47,10 +47,41 @@ object Main extends App {
 
   // 📌 Création du service de base de données
   val dbService = new DatabaseService(db) // ⚠️ Ajoute cette ligne
+  val dbService1=new DatabaseService1(db)
+
 
 
   //A tester
-  /*val utilisateurActor = system.actorOf(UtilisateurActor.props(dbService), "UtilisateurActor")*/
+  val utilisateurActor = system.actorOf(UtilisateurActor.props(dbService), "UtilisateurActor")
+  val utilisateurActor2=system.actorOf(InvestmentActor.props(dbService1), "InvestementActor")
+  val response = (utilisateurActor ? UtilisateurActor.AddUtilisateur("Maco", "test@example.com", "password123", BigDecimal(0)))
+
+
+  response.onComplete {
+    case Success(_) => println("✅ Utilisateur ajouté avec succès !")
+  }
+  var response1 = (utilisateurActor ?UtilisateurActor.updateBalance("test@example.com",100))
+  response1.onComplete {
+    case Success(_) => println("✅ Utilisateur ajouté avec succès !")
+  }
+  var response2=(utilisateurActor ? UtilisateurActor.GetId("test@example.com")).mapTo[Int]
+  var ide=0
+  response2.onComplete {
+    case Success(id)=>{
+      var response3=(utilisateurActor2? InvestmentActor.UpdateInvestment(id,"TechCorp",40))
+      response3.onComplete {
+        case Success(e)=>print(e)
+      }
+      response3=(utilisateurActor2?InvestmentActor.AddInvestment(id,"Bismillah kebab",40))
+      response3.onComplete {
+        case Success(e)=>print(e)
+      }
+
+    }
+  }
+
+
+
   /*
     val response = (utilisateurActor ? UtilisateurActor.AddUtilisateur("Maco", "test@example.com", "password123", BigDecimal(0)))
 

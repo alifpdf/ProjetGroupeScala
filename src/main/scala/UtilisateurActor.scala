@@ -4,6 +4,7 @@ import scala.util.{Failure, Success}
 
 // Définitions des messages pour l'Acteur
 object UtilisateurActor {
+  case class GetId(email: String)
   case class AddUtilisateur(name: String, email: String, password: String, balance: BigDecimal)
   case class VerifierPassword(email: String, password: String)
   case class GetBalance(email: String)
@@ -18,6 +19,12 @@ class UtilisateurActor(dbService: DatabaseService) extends Actor {
   import UtilisateurActor._
 
   def receive: Receive = {
+    case GetId(email:String) =>
+      val senderRef = sender()
+      dbService.getId(email).onComplete{
+        case Success(id) =>senderRef ! id
+      }
+
     case AddUtilisateur(name, email, password, balance) =>
       val senderRef = sender()
       val user = User(name, email, password, balance)
