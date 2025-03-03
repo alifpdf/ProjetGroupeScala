@@ -5,14 +5,15 @@
 
 
 
-  case class User(name: String, email: String, motdepasse:String)
+  case class User(name: String, email: String, motdepasse:String,balance:BigDecimal)
 
-  class UsersTable(tag: Tag) extends Table[User](tag,"Compte"){
+  class UsersTable(tag: Tag) extends Table[User](tag,"users"){
 
     def name = column[String]("name")
     def email = column[String]("email")
-    def motdepasse = column[String]("motdepasse")
-    def * = (name, email, motdepasse) <> (User.tupled, User.unapply)
+    def motdepasse = column[String]("password")
+    def balance = column[BigDecimal]("balance")
+    def * = (name, email, motdepasse,balance) <> (User.tupled, User.unapply)
 
   }
 
@@ -23,20 +24,36 @@
   class DatabaseService(db:Database) {
 
     def addUser(user: User): Future[Int] = {
-      db.run(table += user)
-    }
-    def getUsers: Future[Seq[User]] = {
-      db.run(UsersTable.table.result)
+      println(s"📌 Tentative d'insertion de : ${user}")
+      db.run(UsersTable.table += user).map { result =>
+        println(s"✅ Nombre de lignes insérées : $result")
+        result
+      }.recover {
+        case e: Exception =>
+          println(s"❌ Erreur SQL lors de l'ajout d'utilisateur : ${e.getMessage}")
+          0
+      }
     }
 
-    def getEmail(email:String): Future[Seq[User]] = {
-      db.run(UsersTable.table.filter(_.email===email).result)
-    }
+
 
     def checkPassword(email: String, password: String): Future[Boolean] = {
       db.run(UsersTable.table.filter(_.email === email).result.headOption).map {
         case Some(user) => user.motdepasse == password // Comparaison directe des mots de passe
         case None => false // Aucun utilisateur trouvé
       }
+    }
+
+    def getsomme_restant(email:String):Future[BigDecimal] = {
+      db.run(UsersTable.table.filter(_.email===email)
+          .map(_.balance).result.headOption).map(_.getOrElse(BigDecimal(0)))
+    }
+
+    def updateSommeCompte(somme: BigDecimal, email: String): Future[Int] = {
+      db.run(
+        UsersTable.table.filter(_.email === email)
+          .map(_.balance)
+          .update(somme)
+      )
     }
   }

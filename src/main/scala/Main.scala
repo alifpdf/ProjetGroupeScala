@@ -1,8 +1,22 @@
 import akka.actor.ActorSystem
+import akka.pattern.ask
+import akka.util.Timeout
+import slick.jdbc.PostgresProfile.api._
+import com.typesafe.config.ConfigFactory
+import slick.basic.DatabaseConfig
+import slick.jdbc.JdbcProfile
 import scala.concurrent.ExecutionContext
 import java.sql.DriverManager
 import scala.io.Source
 import scala.sys.process._
+import scala.concurrent.duration._
+import scala.util.{Failure, Success}
+
+import scala.concurrent.duration.DurationInt
+
+
+
+
 
 object Main extends App {
 
@@ -24,8 +38,43 @@ object Main extends App {
     // 📌 Démarrer Akka System
     implicit val system: ActorSystem = ActorSystem("MainSystem")
     implicit val ec: ExecutionContext = system.dispatcher
+  implicit val timeout: Timeout = Timeout(5.seconds)
+  // 📌 Connexion à la base de données via Slick
+  // 📌 Création de la base de données Slick
 
-    val server = new WebSocketServer()(system, ec)
+
+  val db = Database.forConfig("slick.dbs.default.db")
+
+  // 📌 Création du service de base de données
+  val dbService = new DatabaseService(db) // ⚠️ Ajoute cette ligne
+
+
+  //A tester
+  /*val utilisateurActor = system.actorOf(UtilisateurActor.props(dbService), "UtilisateurActor")*/
+  /*
+    val response = (utilisateurActor ? UtilisateurActor.AddUtilisateur("Maco", "test@example.com", "password123", BigDecimal(0)))
+
+    response.onComplete {
+      case Success(_) => println("✅ Utilisateur ajouté avec succès !")
+    }
+    var response1 = (utilisateurActor ?UtilisateurActor.updateBalance("test@example.com",100))
+    response1.onComplete {
+      case Success(_) => println("✅ Utilisateur ajouté avec succès !")
+    }
+
+
+
+    var response2 = (utilisateurActor ?UtilisateurActor.GetBalance("test@example.com"))
+    response2.onComplete {
+      case Success(balance) => println(s"📢 Balance récupérée : $balance")
+    }
+
+    var response3=(utilisateurActor ?UtilisateurActor.VerifierPassword("test@example.com", "password123"))
+    response3.onComplete {
+      case Success(true)=>println("code correct")
+    }*/
+
+  val server = new WebSocketServer()(system, ec)
     server.start()
 
     // 📌 Lancer `npm start` dans `frontend`
@@ -39,7 +88,9 @@ object Main extends App {
 
     println("🚀 Démarrage du frontend React...")
 
+
     val process = Process(npmCommand, new java.io.File(frontendPath)).run()
+
 
     process.exitValue() // Attendre que le processus se termine (optionnel)
   }
