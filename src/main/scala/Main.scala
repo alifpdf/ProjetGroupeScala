@@ -1,3 +1,4 @@
+import AkkaStream.{investments, updateInvestment, updateInvestmentByUsers}
 import akka.actor.ActorSystem
 import akka.pattern.ask
 import akka.util.Timeout
@@ -5,13 +6,13 @@ import slick.jdbc.PostgresProfile.api._
 import com.typesafe.config.ConfigFactory
 import slick.basic.DatabaseConfig
 import slick.jdbc.JdbcProfile
-import scala.concurrent.ExecutionContext
+
+import scala.concurrent.{ExecutionContext, Future}
 import java.sql.DriverManager
 import scala.io.Source
 import scala.sys.process._
 import scala.concurrent.duration._
 import scala.util.{Failure, Success}
-
 import scala.concurrent.duration.DurationInt
 
 
@@ -38,7 +39,7 @@ object Main extends App {
     // 📌 Démarrer Akka System
     implicit val system: ActorSystem = ActorSystem("MainSystem")
     implicit val ec: ExecutionContext = system.dispatcher
-  implicit val timeout: Timeout = Timeout(5.seconds)
+  implicit var timeout: Timeout = Timeout(5.seconds)
   // 📌 Connexion à la base de données via Slick
   // 📌 Création de la base de données Slick
 
@@ -50,35 +51,65 @@ object Main extends App {
   val dbService1=new DatabaseService1(db)
 
 
-
   //A tester
   val utilisateurActor = system.actorOf(UtilisateurActor.props(dbService), "UtilisateurActor")
   val utilisateurActor2=system.actorOf(InvestmentActor.props(dbService1), "InvestementActor")
-  val response = (utilisateurActor ? UtilisateurActor.AddUtilisateur("Maco", "test@example.com", "password123", BigDecimal(0)))
+  updateInvestment().flatMap { _ =>
+    println("✅ Test réussi : Première mise à jour des investissements terminée.")
+    println(s"📊 Nouveaux investissements après la première mise à jour: ${investments.get()}")
 
+    // ✅ Lancer une deuxième mise à jour après la première et attendre son exécution
+    updateInvestment()
+  }.onComplete {
+    case Success(_) =>
+      println("✅ Test réussi : Deuxième mise à jour des investissements terminée.")
+      println(s"📊 Nouveaux investissements après la deuxième mise à jour: ${investments.get()}")
 
-  response.onComplete {
-    case Success(_) => println("✅ Utilisateur ajouté avec succès !")
+    case Failure(ex) =>
+      println(s"❌ Erreur lors de la mise à jour des investissements : ${ex.getMessage}")
   }
-  var response1 = (utilisateurActor ?UtilisateurActor.updateBalance("test@example.com",100))
-  response1.onComplete {
-    case Success(_) => println("✅ Utilisateur ajouté avec succès !")
-  }
-  var response2=(utilisateurActor ? UtilisateurActor.GetId("test@example.com")).mapTo[Int]
-  var ide=0
-  response2.onComplete {
-    case Success(id)=>{
-      var response3=(utilisateurActor2? InvestmentActor.UpdateInvestment(id,"TechCorp",40))
-      response3.onComplete {
-        case Success(e)=>print(e)
-      }
-      response3=(utilisateurActor2?InvestmentActor.AddInvestment(id,"Bismillah kebab",40))
-      response3.onComplete {
-        case Success(e)=>print(e)
-      }
 
+
+
+
+  // Déclaration du timeout ici
+
+  (utilisateurActor ? UtilisateurActor.GetUsers).mapTo[Seq[User]].onComplete {
+    case Success(users) =>
+      println(s"✅ Réponse reçue : ${users.size} utilisateurs")
+    case Failure(ex) =>
+      println(s"❌ Erreur lors de la récupération des utilisateurs : ${ex.getMessage}")
+  }
+
+
+
+    val response = (utilisateurActor ? UtilisateurActor.AddUtilisateur("Maco", "test@example.com", "password123", BigDecimal(0)))
+
+
+    response.onComplete {
+      case Success(_) => println("✅ Utilisateur ajouté avec succès !")
     }
-  }
+    var response1 = (utilisateurActor ?UtilisateurActor.updateBalance("test@example.com",100))
+    response1.onComplete {
+      case Success(_) => println("✅ Utilisateur ajouté avec succès !")
+    }
+    var response2=(utilisateurActor ? UtilisateurActor.GetId("test@example.com")).mapTo[Int]
+
+
+
+    response2.onComplete {
+      case Success(id)=>{
+        var response3=(utilisateurActor2? InvestmentActor.UpdateInvestment(id,"TechCorp",40))
+        response3.onComplete {
+          case Success(e)=>print(e)
+        }
+        response3=(utilisateurActor2?InvestmentActor.AddInvestment(id,"Bismillah kebab",40))
+        response3.onComplete {
+          case Success(e)=>print(e)
+        }
+
+      }
+    }
 
 
 
@@ -124,5 +155,6 @@ object Main extends App {
 
 
     process.exitValue() // Attendre que le processus se termine (optionnel)
+
   }
 }

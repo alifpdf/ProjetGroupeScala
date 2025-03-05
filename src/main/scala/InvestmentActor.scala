@@ -13,7 +13,7 @@ object InvestmentActor {
 }
 
 class InvestmentActor(dbService: DatabaseService1) extends Actor {
-  dbService
+
   import InvestmentActor._
 
   def receive: Receive = {
