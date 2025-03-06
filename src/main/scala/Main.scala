@@ -1,4 +1,4 @@
-import AkkaStream.{investments, updateInvestment, updateInvestmentByUsers}
+import AkkaStream.{investments, update1, updateInvestment, updateInvestmentByUsers}
 import akka.actor.ActorSystem
 import akka.pattern.ask
 import akka.util.Timeout
@@ -111,6 +111,7 @@ object Main extends App {
       }
     }
 
+  update1()
 
 
   /*

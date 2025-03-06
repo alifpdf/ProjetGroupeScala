@@ -1,15 +1,7 @@
-import Main.{dbService, ec, timeout, utilisateurActor, utilisateurActor2}
+import Main.{dbService, ec, system, timeout, utilisateurActor, utilisateurActor2}
 import akka.actor.ActorSystem
 import akka.stream.scaladsl.{Flow, Sink, Source}
 import akka.http.scaladsl.model.ws.{Message, TextMessage}
-import akka.pattern.ask
-
-import scala.util.{Failure, Success}
-import java.util.concurrent.atomic.AtomicReference
-import scala.concurrent.{ExecutionContext, Future}
-import scala.concurrent.duration._
-import scala.util.Random
-import slick.jdbc.PostgresProfile.api._
 
 import scala.math.BigDecimal.RoundingMode
 object AkkaStream {
@@ -63,36 +55,40 @@ object AkkaStream {
     val oldInvestments = investments.get()
 
     // 🔄 Étape 2 : Mettre à jour les investissements en mémoire
-    val updatedInvestments = investments.updateAndGet { currentInvestments =>
+    investments.updateAndGet { currentInvestments =>
       currentInvestments.map { case (company, price) =>
         val newPrice = Random.between(-30, 60) + price
         company -> newPrice
       }
     }
 
-    println(s"✅ Nouveaux prix des investissements : $updatedInvestments")
-
     // 🔄 Étape 3 : Récupérer tous les utilisateurs via `utilisateurActor`
     (utilisateurActor ? UtilisateurActor.GetUsers).mapTo[Seq[User]].flatMap {
-      case users if users.nonEmpty =>
+      users=>
         println(s"✅ ${users.size} utilisateurs trouvés. Début de la mise à jour utilisateur...")
 
-        // 🔄 Étape 4 : Mettre à jour les investissements pour chaque utilisateur
-        val allUpdates: Seq[Future[Unit]] = users.flatMap(_.id).map { userId =>
-          updateInvestmentByUsers(userId, oldInvestments, investments.get())
-        }
+        // 🔄 Étape 4 : Mise à jour des investissements pour chaque utilisateur via un Stream
+        val userUpdateSource = Source(users.flatMap(_.id))
 
-        // 🔄 Étape 5 : Attendre que toutes les mises à jour soient terminées
-        Future.sequence(allUpdates).map { _ =>
+        userUpdateSource.mapAsync(1) { userId =>
+          updateInvestmentByUsers(userId, oldInvestments, investments.get())
+        }.runWith(Sink.ignore).map { _ =>
           println("✅ Mise à jour complète des investissements terminée.")
         }
     }
   }
 
-  def updateBalance()(implicit system: ActorSystem, ec: ExecutionContext): Unit = {
-    Source.tick(1.second, 10.seconds, ()).runForeach { _ =>
+
+
+  def update1()(): Unit = {
+    implicit val system: ActorSystem = ActorSystem("InvestmentUpdater")
+    val updateSource = Source.tick(0.seconds, 5.seconds, "update")
+    val updateFlow = Flow[String].mapAsync(1) { _ =>
+      println("🔄 Début de la mise à jour des investissements...")
       updateInvestment()
     }
+    val runnableGraph = updateSource.via(updateFlow).to(Sink.ignore)
+    runnableGraph.run()
   }
 
 
