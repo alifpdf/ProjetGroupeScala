@@ -1,4 +1,4 @@
-import AkkaStream.{investments, update1, updateInvestment, updateInvestmentByUsers}
+import AkkaStream.{investments, updateInvestment, updateInvestmentByUsers}
 import akka.actor.ActorSystem
 import akka.pattern.ask
 import akka.util.Timeout
@@ -53,7 +53,17 @@ object Main extends App {
 
   //A tester
   val utilisateurActor = system.actorOf(UtilisateurActor.props(dbService), "UtilisateurActor")
-  val utilisateurActor2=system.actorOf(InvestmentActor.props(dbService1), "InvestementActor")
+  val utilisateurActor2=system.actorOf(InvestmentActor.props(dbService1,utilisateurActor), "InvestementActor")
+
+
+  println("resultat string")
+  (utilisateurActor ? UtilisateurActor.GetStringUsers).onComplete {
+    case scala.util.Success(result) => println(s"📌 Réponse reçue : $result")
+    case scala.util.Failure(exception) => println(s"❌ Erreur : ${exception.getMessage}")
+  }
+
+
+  /*
   updateInvestment().flatMap { _ =>
     println("✅ Test réussi : Première mise à jour des investissements terminée.")
     println(s"📊 Nouveaux investissements après la première mise à jour: ${investments.get()}")
@@ -70,9 +80,11 @@ object Main extends App {
   }
 
 
-
+*/
 
   // Déclaration du timeout ici
+
+  /*
 
   (utilisateurActor ? UtilisateurActor.GetUsers).mapTo[Seq[User]].onComplete {
     case Success(users) =>
@@ -111,7 +123,7 @@ object Main extends App {
       }
     }
 
-  update1()
+  update1()*/
 
 
   /*

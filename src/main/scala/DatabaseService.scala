@@ -1,11 +1,16 @@
   import UsersTable.table
+  import play.api.libs.json.Json
   import slick.jdbc.PostgresProfile.api._
   import slick.lifted.ProvenShape
 
   import scala.concurrent.ExecutionContext.Implicits.global
   import scala.concurrent.Future
 
-
+  import play.api.libs.json._
+  object User {
+    implicit val userFormat: OFormat[User] = Json.format[User]
+    val tupled = (User.apply _).tupled // ✅ Ajout de tupled explicitement
+  }
 
   case class User(id: Option[Int] = None, name: String, email: String, motdepasse: String, balance: BigDecimal)
 
@@ -31,6 +36,10 @@
     def getUsers: Future[Seq[User]] = {
       db.run(table.result)
     }
+    def getAllUsers: Future[String] = {
+      db.run(table.result) // Récupère tous les utilisateurs
+        .map(users => Json.stringify(Json.toJson(users))) // Convertit en JSON string
+    }
 
 
     def addUser(user: User): Future[Int] = {
@@ -47,6 +56,12 @@
 
     def getUser(id: Int): Future[Option[User]] = {
       db.run(table.filter(_.id === id).result.headOption)
+    }
+
+    def getEmail(id: Int): Future[String] =
+    {
+      db.run(table.filter(_.id === id).map(_.email).result.headOption).map(_.getOrElse(""))
+
     }
 
 
@@ -68,10 +83,14 @@
       db.run(UsersTable.table.filter(_.email===email)
           .map(_.balance).result.headOption).map(_.getOrElse(BigDecimal(0)))
     }
+    def getsomme_restant1(id:Int):Future[BigDecimal] = {
+      db.run(UsersTable.table.filter(_.id===id)
+        .map(_.balance).result.headOption).map(_.getOrElse(BigDecimal(0)))
+    }
 
-    def updateSommeCompte(somme: BigDecimal, email: String): Future[Int] = {
+    def updateSommeCompte(somme: BigDecimal, id:Int): Future[Int] = {
       db.run(
-        UsersTable.table.filter(_.email === email)
+        UsersTable.table.filter(_.id === id)
           .map(_.balance)
           .update(somme)
       )

@@ -1,3 +1,4 @@
+import akka.actor.typed.ActorRef
 import akka.actor.{Actor, Props}
 import akka.pattern.pipe
 
@@ -8,19 +9,23 @@ import scala.util.{Failure, Success}
 object UtilisateurActor {
   case class GetUser(id:Int)
   case class GetUsers()
+  case class GetStringUsers()
   case class GetId(email: String)
+  case class GetEmail(id:Int)
   case class AddUtilisateur(name: String, email: String, password: String, balance: BigDecimal)
   case class VerifierPassword(email: String, password: String)
   case class GetBalance(email: String)
-  case class updateBalance(email: String, balance: BigDecimal)
+  case class GetBalance1(id:Int)
+  case class updateBalance(id: Int, balance: BigDecimal)
 
-  // Méthode pour créer un acteur
-  def props(dbService: DatabaseService): Props = Props(new UtilisateurActor(dbService))
+    // Méthode pour créer un acteur
+    def props(dbService: DatabaseService): Props = Props(new UtilisateurActor(dbService))
 }
 
 // Implémentation de l'Acteur
 class UtilisateurActor(dbService: DatabaseService) extends Actor {
   import UtilisateurActor._
+
 
   def receive: Receive = {
 
@@ -33,6 +38,14 @@ class UtilisateurActor(dbService: DatabaseService) extends Actor {
           replyTo ! users
       }
 
+    case GetStringUsers =>
+      val originalSender = sender()
+      dbService.getAllUsers.onComplete {
+        case Success(jsonString) =>
+          println(s"📌 Envoi de la réponse JSON : $jsonString") // Debugging
+          originalSender ! jsonString
+      }
+
 
 
     case GetUser(id:Int) =>
@@ -42,7 +55,11 @@ class UtilisateurActor(dbService: DatabaseService) extends Actor {
       }
 
 
-
+      case GetEmail(id) =>
+      val replyTo = sender
+      dbService.getEmail(id).onComplete {
+        case Success(email) =>replyTo!email
+      }
 
 
 
@@ -73,9 +90,15 @@ class UtilisateurActor(dbService: DatabaseService) extends Actor {
         case Success(balance) => senderRef ! balance
       }
 
-    case updateBalance(email, amount) =>
+    case GetBalance1(id) =>
       val senderRef = sender()
-      dbService.updateSommeCompte(amount, email).onComplete{
+      dbService.getsomme_restant1(id).onComplete {
+        case Success(balance) => senderRef ! balance
+      }
+
+    case updateBalance(id, amount) =>
+      val senderRef = sender()
+      dbService.updateSommeCompte(amount, id).onComplete{
         case Success(_) => senderRef ! "success"
       }
 
