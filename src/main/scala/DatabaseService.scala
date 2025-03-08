@@ -37,9 +37,13 @@
       db.run(table.result)
     }
     def getAllUsers: Future[String] = {
-      db.run(table.result) // Récupère tous les utilisateurs
-        .map(users => Json.stringify(Json.toJson(users))) // Convertit en JSON string
+      db.run(table.result).map { users =>
+        val json = Json.toJson(users) // ✅ Convertit en JSON
+        println("📌 JSON des utilisateurs :", json) // Debug
+        Json.stringify(json) // ✅ Convertit en String
+      }
     }
+
 
 
     def addUser(user: User): Future[Int] = {
@@ -88,11 +92,28 @@
         .map(_.balance).result.headOption).map(_.getOrElse(BigDecimal(0)))
     }
 
-    def updateSommeCompte(somme: BigDecimal, id:Int): Future[Int] = {
-      db.run(
-        UsersTable.table.filter(_.id === id)
-          .map(_.balance)
-          .update(somme)
-      )
+    import scala.concurrent.Future
+    import slick.jdbc.PostgresProfile.api._
+
+    def updateSommeCompte(somme: BigDecimal, id: Int): Future[Int] = {
+      println(s"🔄 [DB] Mise à jour du solde de l'utilisateur $id de +$somme")
+
+      val query = UsersTable.table
+        .filter(_.id === id)
+        .map(_.balance)
+        .update(somme)
+
+      db.run(query).map { rowsUpdated =>
+        if (rowsUpdated > 0) {
+          println(s"✅ [DB] Solde mis à jour pour User ID: $id (Nouveau solde: $somme)")
+        } else {
+          println(s"⚠️ [DB] Aucun utilisateur trouvé avec ID: $id")
+        }
+        rowsUpdated
+      }.recover { case e =>
+        println(s"❌ [DB] Erreur SQL lors de la mise à jour du solde: ${e.getMessage}")
+        0
+      }
     }
+
   }

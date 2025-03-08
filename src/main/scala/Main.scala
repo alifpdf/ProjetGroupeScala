@@ -63,6 +63,12 @@ object Main extends App {
   }
 
 
+
+
+
+
+
+
   /*
   updateInvestment().flatMap { _ =>
     println("✅ Test réussi : Première mise à jour des investissements terminée.")
@@ -153,7 +159,8 @@ object Main extends App {
     server.start()
 
     // 📌 Lancer `npm start` dans `frontend`
-    startFrontend()
+   startFrontend()
+
 
 
   // 📌 Fonction pour démarrer le frontend

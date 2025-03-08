@@ -10,7 +10,6 @@ object AkkaStream {
   import scala.concurrent.{Future, ExecutionContext}
   import scala.util.Random
   import akka.pattern.ask
-  import akka.util.Timeout
   import scala.concurrent.duration._
 
   var investments = new AtomicReference(Map(
@@ -66,8 +65,21 @@ object AkkaStream {
       Future.sequence(userUpdateFutures).flatMap { _ =>
         println("✅ Mise à jour complète des investissements terminée.")
 
-        // 🔥 Récupérer la liste des utilisateurs après la mise à jour
-        (utilisateurActor ? UtilisateurActor.GetStringUsers).mapTo[String]
+        for {
+          usersJson <- (utilisateurActor ? UtilisateurActor.GetStringUsers).mapTo[String]
+          investmentsJson <- (utilisateurActor2 ? InvestmentActor.GetInvestmentsString(1)).mapTo[String]
+        } yield {
+          // 🔹 Combiner les deux JSON en un seul
+          val combinedJson = s"""
+          {
+            "type": "update",
+            "users": $usersJson,
+            "investments": $investmentsJson
+          }
+        """
+          println(s"📌 JSON combiné envoyé : $combinedJson") // Debug
+          combinedJson
+        }
       }
     }
   }
@@ -75,23 +87,32 @@ object AkkaStream {
 
   def generateUpdateSource()(implicit system: ActorSystem, ec: ExecutionContext): Source[Message, Any] = {
     Source.tick(1.second, 5.seconds, "").flatMapConcat { _ =>
-      Source.future(updateInvestment().map(TextMessage(_)))
+      Source.future(
+        updateInvestment().map { combinedJson =>
+          TextMessage(combinedJson) // ✅ Envoie le JSON complet au frontend
+        }
+      )
     }
   }
+
+
   def generateRandomNumberSource()(implicit system: ActorSystem, ec: ExecutionContext): Source[Message, Any] = {
     Source.tick(1.second, 5.seconds, "").map { _ =>
       val randomNumber = Random.nextInt(100) // Nombre aléatoire entre 0 et 99
-      TextMessage(s"$randomNumber") // Envoie le nombre en WebSocket
+      val jsonMessage = Json.obj(
+        "type" -> "random",
+        "data" -> randomNumber
+      )
+      TextMessage(jsonMessage.toString()) // Envoie le nombre en WebSocket
     }
   }
+
 
   def websocketFlow()(implicit system: ActorSystem, ec: ExecutionContext): Flow[Message, Message, Any] = {
     val combinedSource = Source.combine(
       generateRandomNumberSource(),
       generateUpdateSource()
     )(Merge(_)) // Utilisation ok si l'ordre n'est pas un problème
-    // Fusionne les deux flux en un seul
-
     Flow.fromSinkAndSource(Sink.ignore, combinedSource)
   }
 

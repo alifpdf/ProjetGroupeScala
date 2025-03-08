@@ -1,8 +1,15 @@
+import play.api.libs.json.{Json, OFormat}
 import slick.jdbc.PostgresProfile.api._
+
 import scala.concurrent.{ExecutionContext, Future}
 
 // Définition du modèle d'investissement
 case class Investment(id: Option[Int], userId: Int, companyName: String, amountInvested: BigDecimal)
+
+object Investment {
+  implicit val investmentFormat: OFormat[Investment] = Json.format[Investment]
+  val tupled = (Investment.apply _).tupled
+}
 
 // Définition de la table des investissements
 class InvestmentsTable(tag: Tag) extends Table[Investment](tag, "investments") {
@@ -34,6 +41,18 @@ class DatabaseService1(db: Database)(implicit ec: ExecutionContext) {
   def getInvestmentsByUser(userId: Int): Future[Seq[Investment]] = {
     db.run(InvestmentsTable.table.filter(_.userId === userId).result)
   }
+
+  def getInvestmentsByUserString(userId: Int): Future[String] = {
+    db.run(InvestmentsTable.table.filter(_.userId === userId).result).map { investments =>
+      val json = Json.toJson(investments.map(i => i.copy(id = i.id.orElse(Some(0))))) // 🔥 Remplace `None` par `Some(0)`
+      println(s"📌 JSON des investissements envoyé : $json") // Debugging
+      Json.stringify(json)
+    }
+  }
+
+
+
+
 
   // Supprimer un investissement
   def deleteInvestment(investmentId: Int,companyName:String): Future[Int] = {

@@ -42,9 +42,10 @@ class UtilisateurActor(dbService: DatabaseService) extends Actor {
       val originalSender = sender()
       dbService.getAllUsers.onComplete {
         case Success(jsonString) =>
-          println(s"📌 Envoi de la réponse JSON : $jsonString") // Debugging
+          println(s"📌 JSON récupéré depuis la base de données : $jsonString") // Debugging
           originalSender ! jsonString
       }
+
 
 
 
@@ -72,10 +73,11 @@ class UtilisateurActor(dbService: DatabaseService) extends Actor {
     case AddUtilisateur(name, email, password, balance) =>
       val senderRef = sender()
       val user = User(None,name, email, password, balance)
-      dbService.addUser(user).onComplete {
-        case Success(_) => senderRef ! s"✅ Utilisateur $name ajouté avec succès."
 
-      }
+      dbService.addUser(user).map(_ => s"✅ Utilisateur $name ajouté avec succès.").pipeTo(senderRef)
+
+
+
 
 
     case VerifierPassword(email, password) =>
@@ -90,11 +92,15 @@ class UtilisateurActor(dbService: DatabaseService) extends Actor {
         case Success(balance) => senderRef ! balance
       }
 
-    case GetBalance1(id) =>
+    case GetBalance1(userId) =>
       val senderRef = sender()
-      dbService.getsomme_restant1(id).onComplete {
+      println(s"📢 Récupération du solde utilisateur ID: $userId")
+
+      dbService.getsomme_restant1(userId).onComplete {
         case Success(balance) => senderRef ! balance
+
       }
+
 
     case updateBalance(id, amount) =>
       val senderRef = sender()
