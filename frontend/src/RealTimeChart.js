@@ -78,7 +78,7 @@ function RealTimeChart() {
     // 📌 Fonction pour récupérer les données mises à jour après une récupération de somme
     const fetchUpdatedData = async () => {
         try {
-            const response = await fetch("http://localhost:8080/ws"); // Changer si nécessaire
+            const response = await fetch("http://localhost:8080/api/get-investments"); // ✅ Change l'endpoint
             const message = await response.json();
 
             console.log("📢 Mise à jour des données :", message);
@@ -88,6 +88,7 @@ function RealTimeChart() {
             console.error("❌ Erreur lors de la récupération des données mises à jour :", error);
         }
     };
+
 
     return (
         <div style={{ textAlign: "center", marginTop: "50px" }}>

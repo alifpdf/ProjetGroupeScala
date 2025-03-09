@@ -53,18 +53,14 @@ class UtilisateurActor(dbService: DatabaseService) extends Actor {
 
 
 
-    case GetUser(id:Int) =>
+    case GetUser(id) =>
       val replyTo = sender
-      dbService.getUser(id).onComplete {
-        case Success(user) =>replyTo!user
-      }
+      dbService.getUser(id).pipeTo(replyTo)
 
 
       case GetEmail(id) =>
       val replyTo = sender
-      dbService.getEmail(id).onComplete {
-        case Success(email) =>replyTo!email
-      }
+      dbService.getEmail(id).pipeTo(replyTo)
 
 
 
@@ -90,19 +86,14 @@ class UtilisateurActor(dbService: DatabaseService) extends Actor {
       }
     case GetBalance(email) =>
       val senderRef = sender()
-      dbService.getsomme_restant(email).onComplete {
-        case Success(balance) => senderRef ! balance
-      }
+      dbService.getsomme_restant(email).pipeTo(senderRef)
 
 
     case GetBalance1(userId) =>
       val senderRef = sender()
       println(s"📢 Récupération du solde utilisateur ID: $userId")
 
-      dbService.getsomme_restant1(userId).onComplete {
-        case Success(balance) => senderRef ! balance
-
-      }
+      dbService.getsomme_restant1(userId).pipeTo(senderRef)
 
 
     case updateBalance(id, amount) =>
@@ -150,7 +141,6 @@ class UtilisateurActor(dbService: DatabaseService) extends Actor {
           println(s"❌ [Connexion] Erreur serveur : ${e.getMessage}")
           senderRef ! "❌ Erreur interne du serveur"
       }
-
 
 
   }

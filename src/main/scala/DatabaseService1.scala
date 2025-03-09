@@ -50,6 +50,15 @@ class DatabaseService1(db: Database)(implicit ec: ExecutionContext) {
     }
   }
 
+  def getAllInvestmentsString: Future[String] = {
+    db.run(InvestmentsTable.table.result).map { investments =>
+      val json = Json.toJson(investments.map(i => i.copy(id = i.id.orElse(Some(0))))) // 🔥 Remplace `None` par `Some(0)`
+      println(s"📌 JSON de tous les investissements envoyé : $json") // Debugging
+      Json.stringify(json)
+    }
+  }
+
+
 
 
 

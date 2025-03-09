@@ -63,7 +63,14 @@ object Main extends App {
   }
 
 
+  import scala.util.{Success, Failure}
 
+  (utilisateurActor2 ? InvestmentActor.AddInvestment(1, "Google", 2)).onComplete {
+    case Success(response) =>
+      println(s"✅ Succès : $response") // Affiche la réponse de l'opération
+    case Failure(exception) =>
+      println(s"❌ Erreur : ${exception.getMessage}") // Gère les erreurs
+  }
 
 
 

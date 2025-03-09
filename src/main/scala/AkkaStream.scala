@@ -2,7 +2,7 @@ import Main.{dbService, ec, system, timeout, utilisateurActor, utilisateurActor2
 import akka.actor.ActorSystem
 import akka.stream.scaladsl.{Flow, Merge, Sink, Source}
 import akka.http.scaladsl.model.ws.{Message, TextMessage}
-import play.api.libs.json.Json
+import play.api.libs.json.{JsObject, Json}
 
 import scala.math.BigDecimal.RoundingMode
 object AkkaStream {
@@ -12,39 +12,41 @@ object AkkaStream {
   import akka.pattern.ask
   import scala.concurrent.duration._
 
-  var investments = new AtomicReference(Map(
+  var investments: Map[String, Int] = Map(
     "TechCorp" -> 25,
     "Google" -> 40,
     "Nasdaq" -> 60
-  ))
-
+  )
   def updateInvestmentByUsers(userId: Int, oldInvestments: Map[String, Int], updatedInvestments: Map[String, Int]): Future[Unit] = {
     println(s"🔄 Mise à jour des investissements pour l'utilisateur $userId...")
-    (utilisateurActor2 ? InvestmentActor.GetInvestments(userId)).map {
-      case investments: Seq[Investment] =>
-        println(s"📊 ${investments.size} investissements trouvés pour l'utilisateur $userId.")
-        val updatedInvestmentFutures = investments.map { investment =>
-          val company = investment.companyName
-          val oldPrice = BigDecimal(oldInvestments.getOrElse(company, 1).toDouble)
-          val newPrice = BigDecimal(updatedInvestments.getOrElse(company, 1).toDouble)
-          val amountInvested = BigDecimal(investment.amountInvested.toDouble)
-          val newAmount = (amountInvested / oldPrice) * newPrice.setScale(2, RoundingMode.HALF_UP)
 
-          println(s"📢 Mise à jour de $company pour l'utilisateur $userId : $amountInvested → $newAmount")
-          utilisateurActor2 ? InvestmentActor.UpdateInvestment(userId, company, newAmount)
-        }
-        Future.sequence(updatedInvestmentFutures).map(_ => ())
+    (utilisateurActor2 ? InvestmentActor.GetInvestments(userId)).mapTo[Seq[Investment]].flatMap { investments =>
+      println(s"📊 ${investments.size} investissements trouvés pour l'utilisateur $userId.")
+
+      val updatedInvestmentFutures = investments.map { investment =>
+        val oldPrice = BigDecimal(oldInvestments.getOrElse(investment.companyName, 1).toDouble)
+        val newPrice = BigDecimal(updatedInvestments.getOrElse(investment.companyName, 1).toDouble)
+        val amountInvested = BigDecimal(investment.amountInvested.toDouble)
+        val newAmount = (amountInvested / oldPrice) * newPrice.setScale(2, RoundingMode.HALF_UP)
+
+        println(s"📢 Mise à jour de ${investment.companyName} pour l'utilisateur $userId : $amountInvested → $newAmount")
+
+        (utilisateurActor2 ? InvestmentActor.UpdateInvestment(userId, investment.companyName, newAmount)).mapTo[String]
+      }
+
+      Future.sequence(updatedInvestmentFutures).map(_ => ())
     }
+
   }
 
   def updateInvestment(): Future[String] = {
     println("📩 Démarrage de la mise à jour globale des investissements...")
 
-    val oldInvestments = investments.get()
+    val oldInvestments = synchronized { investments }
 
     // Mettre à jour les investissements avec de nouveaux prix
-    investments.updateAndGet { currentInvestments =>
-      currentInvestments.map { case (company, price) =>
+    synchronized {
+      investments = investments.map { case (company, price) =>
         val newPrice = Random.between(-30, 60) + price
         company -> newPrice
       }
@@ -55,20 +57,21 @@ object AkkaStream {
       println(s"✅ ${users.size} utilisateurs trouvés. Début de la mise à jour utilisateur...")
 
       val userUpdateFutures = users.flatMap { user =>
-        user.id.map { userId =>  // 🔥 Extraction de l'ID seulement s'il est défini
-          updateInvestmentByUsers(userId, oldInvestments, investments.get())
+        user.id.map { userId =>
+          updateInvestmentByUsers(userId, oldInvestments, synchronized { investments })
         }
       }
-
 
       // Attendre que toutes les mises à jour des utilisateurs soient terminées
       Future.sequence(userUpdateFutures).flatMap { _ =>
         println("✅ Mise à jour complète des investissements terminée.")
-
         for {
           usersJson <- (utilisateurActor ? UtilisateurActor.GetStringUsers).mapTo[String]
-          investmentsJson <- (utilisateurActor2 ? InvestmentActor.GetInvestmentsString(1)).mapTo[String]
+          investmentsJson <- (utilisateurActor2 ? InvestmentActor.GetAllInvestmentsString).mapTo[String]
+
+
         } yield {
+          println(s"📢 JSON final des investissements avant envoi : $investmentsJson")
           // 🔹 Combiner les deux JSON en un seul
           val combinedJson = s"""
           {
@@ -86,7 +89,7 @@ object AkkaStream {
 
 
   def generateUpdateSource()(implicit system: ActorSystem, ec: ExecutionContext): Source[Message, Any] = {
-    Source.tick(1.second, 5.seconds, "").flatMapConcat { _ =>
+    Source.tick(1.second, 10.seconds, "").flatMapConcat { _ =>
       Source.future(
         updateInvestment().map { combinedJson =>
           TextMessage(combinedJson) // ✅ Envoie le JSON complet au frontend

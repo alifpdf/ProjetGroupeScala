@@ -104,7 +104,17 @@ class WebSocketServer(implicit system: ActorSystem, ec: ExecutionContext) {
              }
           }
         }
+      },
+      path("api" / "get-investments") {
+        get {
+          complete(
+            (utilisateurActor2 ? InvestmentActor.GetAllInvestmentsString)
+              .mapTo[String]
+              .map(response => Json.obj("success" -> true, "investments" -> response).toString())
+          )
+        }
       }
+
 
 
 

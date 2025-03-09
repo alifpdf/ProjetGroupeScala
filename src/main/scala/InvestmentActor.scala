@@ -14,6 +14,7 @@ object InvestmentActor {
   case class DeleteInvestment(investmentId: Int,companyName:String)
   case class UpdateInvestment(investmentId: Int, companyName:String,newAmount: BigDecimal)
   case class RecupererlaSomme(companyName:String,id:Int, amount:BigDecimal)
+  case object GetAllInvestmentsString
 
   def props(dbService: DatabaseService1, actor:ActorRef): Props = Props(new InvestmentActor(dbService,actor))
 }
@@ -24,53 +25,67 @@ class InvestmentActor(dbService: DatabaseService1,actor: ActorRef) extends Actor
   import context._
 
   def receive: Receive = {
+
     case AddInvestment(userId, companyName, amount) =>
       val senderRef = sender() // Sauvegarde du sender
-      // Étape 1 : Récupérer le solde actuel de l'utilisateur
-      (self ? UtilisateurActor.GetBalance1(userId)).flatMap {
-        case balance: BigDecimal =>
-          val newBalance = balance - amount
-          if (newBalance < 0) {
-            Future.successful(senderRef ! "Échec : Solde insuffisant")
-          } else {
-            // Étape 2 : Mettre à jour le solde avant d'ajouter l'investissement
-            (self ? UtilisateurActor.updateBalance(userId, newBalance)).flatMap {
-              case Success(_) =>
-                // Étape 3 : Ajouter l’investissement après mise à jour du solde
-                dbService.addInvestment(userId, companyName, amount).map { _ =>
-                  senderRef ! "Succès : Investissement ajouté"
-                }
-            }
-          }
+
+      val result = for {
+        // 🔹 Étape 1 : Récupérer le solde actuel de l'utilisateur depuis `UtilisateurActor`
+        balance <- (actor ? UtilisateurActor.GetBalance1(userId)).mapTo[BigDecimal]
+        newBalance = balance - amount
+
+        // 🔹 Vérification du solde
+        _ <- if (newBalance < 0) {
+          println(s"❌ [InvestmentActor] Solde insuffisant pour investir $amount €")
+          Future.successful(senderRef ! "Échec : Solde insuffisant") // ✅ Répond immédiatement
+        } else {
+          (actor ? UtilisateurActor.updateBalance(userId, newBalance)).map(_ => ())
+        }
+
+        _ = println(s"✅ [InvestmentActor] Nouveau solde après investissement : $newBalance €")
+
+        // 🔹 Étape 3 : Ajouter l’investissement en base de données
+        _ <- dbService.addInvestment(userId, companyName, amount)
+
+      } yield {
+        println(s"✅ [InvestmentActor] Investissement ajouté pour $companyName")
+        senderRef ! "✅ Succès : Investissement ajouté" // ✅ Répond immédiatement après l'ajout
       }
+      result
 
 
 
 
-  case GetInvestments(userId) =>
+
+
+
+    case GetAllInvestmentsString =>
       val senderRef = sender()
-      dbService.getInvestmentsByUser(userId).onComplete {
-        case Success(investments) => senderRef ! investments
-
+      dbService.getAllInvestmentsString.onComplete {
+        case Success(investmentsJson) =>
+          println(s"📌 Envoi de tous les investissements au frontend : $investmentsJson")
+          senderRef ! investmentsJson
+        case Failure(e) =>
+          println(s"❌ Erreur lors de la récupération des investissements : ${e.getMessage}")
+          senderRef ! "[]"
       }
+
+
+
+
+    case GetInvestments(userId) =>
+      val senderRef = sender()
+      dbService.getInvestmentsByUser(userId).pipeTo(senderRef)
 
     case GetInvestmentsString(userId) =>
       val senderRef = sender()
-      dbService.getInvestmentsByUserString(userId).onComplete {
-        case Success(investmentsJson) =>
-          println(s"📌 Envoi des investissements au frontend : $investmentsJson") // Debug
-          senderRef ! investmentsJson
-
-      }
+      dbService.getInvestmentsByUserString(userId).pipeTo(senderRef)
 
 
 
     case DeleteInvestment(investmentId: Int, companyName: String) =>
       val senderRef = sender()
-      dbService.deleteInvestment(investmentId, companyName).onComplete {
-        case Success(_) => senderRef ! "Success"
-
-      }
+      dbService.deleteInvestment(investmentId, companyName).pipeTo(senderRef)
 
 
 
@@ -89,23 +104,17 @@ class InvestmentActor(dbService: DatabaseService1,actor: ActorRef) extends Actor
       val senderRef = sender()
       println(s"📢 [InvestmentActor] Demande reçue pour récupérer $sommeInvesti de $companyName (User ID: $id)")
 
-      (self ? UpdateInvestment(id, companyName, 0)).flatMap {
-        case "✅ Mise à jour réussie" =>
-          println(s"✅ [InvestmentActor] Investissement de $companyName mis à 0 pour l'utilisateur $id.")
+      val result = for {
+        updateResult <- (self ? UpdateInvestment(id, companyName, 0)).mapTo[String]
+        balance <- (actor ? UtilisateurActor.GetBalance1(id)).mapTo[BigDecimal]
+        _ <- (actor ? UtilisateurActor.updateBalance(id, balance + sommeInvesti))
+      } yield {
+        println(s"✅ [InvestmentActor] Somme de $sommeInvesti récupérée pour $companyName")
+        "✅ Somme récupérée avec succès"
+      }
 
-          (actor ? UtilisateurActor.GetBalance1(id)).flatMap {
-            case balance: BigDecimal =>
-              println(s"📢 [InvestmentActor] Solde actuel de l'utilisateur: $balance")
-              val nouveauSolde = balance + sommeInvesti
-              println(s"✅ [InvestmentActor] Nouveau solde après récupération: $nouveauSolde")
-
-              (actor ? UtilisateurActor.updateBalance(id, nouveauSolde)).map { _ =>
-                println(s"✅ [InvestmentActor] Solde mis à jour, envoi de la réponse...")
-                "✅ Somme récupérée avec succès"
-              }
-
-          }
-      }.pipeTo(senderRef) // ✅ Envoie la réponse à `senderRef`
+      result.pipeTo(senderRef) // ✅ Envoie une réponse correcte
+      // ✅ Envoie la réponse à `senderRef`
 
 
 
