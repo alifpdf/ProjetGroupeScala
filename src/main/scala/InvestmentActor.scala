@@ -16,10 +16,10 @@ object InvestmentActor {
   case class RecupererlaSomme(companyName:String,id:Int, amount:BigDecimal)
   case object GetAllInvestmentsString
 
-  def props(dbService: DatabaseService1, actor:ActorRef): Props = Props(new InvestmentActor(dbService,actor))
+  def props(dbService: DBInvestment, actor:ActorRef): Props = Props(new InvestmentActor(dbService,actor))
 }
 
-class InvestmentActor(dbService: DatabaseService1,actor: ActorRef) extends Actor {
+class InvestmentActor(dbService: DBInvestment,actor: ActorRef) extends Actor {
 
   import InvestmentActor._
   import context._
@@ -52,9 +52,6 @@ class InvestmentActor(dbService: DatabaseService1,actor: ActorRef) extends Actor
         senderRef ! "✅ Succès : Investissement ajouté" // ✅ Répond immédiatement après l'ajout
       }
       result
-
-
-
 
 
 

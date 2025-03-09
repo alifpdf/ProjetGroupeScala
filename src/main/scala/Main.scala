@@ -47,8 +47,8 @@ object Main extends App {
   val db = Database.forConfig("slick.dbs.default.db")
 
   // 📌 Création du service de base de données
-  val dbService = new DatabaseService(db) // ⚠️ Ajoute cette ligne
-  val dbService1=new DatabaseService1(db)
+  val dbService = new DBUtilisateur(db) // ⚠️ Ajoute cette ligne
+  val dbService1=new DBInvestment(db)
 
 
   //A tester

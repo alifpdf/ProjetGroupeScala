@@ -30,7 +30,7 @@
     val table = TableQuery[UsersTable]
   }
 
-  class DatabaseService(db:Database) {
+  class DBUtilisateur(db:Database) {
 
     // ✅ Récupère tous les utilisateurs
     def getUsers: Future[Seq[User]] = {

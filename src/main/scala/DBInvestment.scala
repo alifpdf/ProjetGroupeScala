@@ -28,7 +28,7 @@ object InvestmentsTable {
 }
 
 // Service de gestion des investissements
-class DatabaseService1(db: Database)(implicit ec: ExecutionContext) {
+class DBInvestment(db: Database)(implicit ec: ExecutionContext) {
 
   // Ajouter un investissement
   def addInvestment(userId: Int, companyName: String, amountInvested: BigDecimal): Future[Int] = {
@@ -44,7 +44,7 @@ class DatabaseService1(db: Database)(implicit ec: ExecutionContext) {
 
   def getInvestmentsByUserString(userId: Int): Future[String] = {
     db.run(InvestmentsTable.table.filter(_.userId === userId).result).map { investments =>
-      val json = Json.toJson(investments.map(i => i.copy(id = i.id.orElse(Some(0))))) // 🔥 Remplace `None` par `Some(0)`
+      val json = Json.toJson(investments.map(i => i.copy(id = i.id))) // 🔥 Remplace `None` par `Some(0)`
       println(s"📌 JSON des investissements envoyé : $json") // Debugging
       Json.stringify(json)
     }
@@ -52,7 +52,7 @@ class DatabaseService1(db: Database)(implicit ec: ExecutionContext) {
 
   def getAllInvestmentsString: Future[String] = {
     db.run(InvestmentsTable.table.result).map { investments =>
-      val json = Json.toJson(investments.map(i => i.copy(id = i.id.orElse(Some(0))))) // 🔥 Remplace `None` par `Some(0)`
+      val json = Json.toJson(investments.map(i => i.copy(id = i.id))) // 🔥 Remplace `None` par `Some(0)`
       println(s"📌 JSON de tous les investissements envoyé : $json") // Debugging
       Json.stringify(json)
     }

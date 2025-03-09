@@ -23,11 +23,11 @@ object UtilisateurActor {
   case class connexion(email: String, password: String)
 
     // Méthode pour créer un acteur
-    def props(dbService: DatabaseService): Props = Props(new UtilisateurActor(dbService))
+    def props(dbService: DBUtilisateur): Props = Props(new UtilisateurActor(dbService))
 }
 
 // Implémentation de l'Acteur
-class UtilisateurActor(dbService: DatabaseService) extends Actor {
+class UtilisateurActor(dbService: DBUtilisateur) extends Actor {
   import UtilisateurActor._
 
 
@@ -106,41 +106,49 @@ class UtilisateurActor(dbService: DatabaseService) extends Actor {
     case connexion(email, password) =>
       val senderRef = sender()
 
-      // ✅ Vérifier le mot de passe
-      (utilisateurActor ? UtilisateurActor.VerifierPassword(email, password)).mapTo[Boolean].flatMap {
-        case true =>
-          println(s"✅ [Connexion] Mot de passe correct pour $email")
-
-          // ✅ Récupérer l'ID de l'utilisateur
-          (utilisateurActor ? UtilisateurActor.GetId(email)).mapTo[Int].flatMap {
-            case userId if userId > 0 =>
-              println(s"✅ [Connexion] ID utilisateur récupéré : $userId")
-
-              // ✅ Récupérer les informations utilisateur
-              (utilisateurActor ? UtilisateurActor.GetUser(userId)).mapTo[Option[User]].map {
-                case Some(user) =>
-                  val userJson = Json.obj(
-                    "id" -> user.id,
-                    "name" -> user.name,
-                    "email" -> user.email,
-                    "balance" -> user.balance
-                  ).toString()
-
-                  println(s"✅ [Connexion] Utilisateur trouvé : $userJson")
-                  senderRef ! userJson // ✅ Retourne l'utilisateur en `String JSON`
-              }
-
-          }
-
-        case false =>
+      // ✅ Gestion avec un `for-comprehension`
+      val result = for {
+        // Étape 1 : Vérifier le mot de passe
+        passwordValid <- (utilisateurActor ? UtilisateurActor.VerifierPassword(email, password)).mapTo[Boolean]
+        _ = if (!passwordValid) {
           println(s"❌ [Connexion] Mot de passe incorrect pour $email")
           senderRef ! "❌ Mot de passe incorrect"
-          Future.successful(())
-      }.recover {
-        case e: Exception =>
-          println(s"❌ [Connexion] Erreur serveur : ${e.getMessage}")
-          senderRef ! "❌ Erreur interne du serveur"
+          throw new Exception("Mot de passe incorrect") // 🔥 Arrête l'exécution immédiatement
+        }
+
+        // Étape 2 : Récupérer l'ID de l'utilisateur
+        userId <- (utilisateurActor ? UtilisateurActor.GetId(email)).mapTo[Int]
+        _ = if (userId <= 0) {
+          println(s"❌ [Connexion] Aucun utilisateur trouvé pour $email")
+          senderRef ! "❌ Utilisateur non trouvé"
+          throw new Exception("Utilisateur non trouvé")
+        }
+
+        // Étape 3 : Récupérer les informations complètes de l'utilisateur
+        maybeUser <- (utilisateurActor ? UtilisateurActor.GetUser(userId)).mapTo[Option[User]]
+
+      } yield {
+        maybeUser match {
+          case Some(user) =>
+            val userJson = Json.obj(
+              "id" -> user.id,
+              "name" -> user.name,
+              "email" -> user.email,
+              "balance" -> user.balance
+            ).toString()
+
+            println(s"✅ [Connexion] Utilisateur trouvé : $userJson")
+            senderRef ! userJson
+
+          case None =>
+            println(s"❌ [Connexion] Erreur : Utilisateur $userId introuvable")
+            senderRef ! "❌ Utilisateur introuvable"
+        }
       }
+
+      result
+
+
 
 
   }

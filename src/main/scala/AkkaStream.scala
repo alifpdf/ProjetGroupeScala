@@ -6,7 +6,6 @@ import play.api.libs.json.{JsObject, Json}
 
 import scala.math.BigDecimal.RoundingMode
 object AkkaStream {
-  import java.util.concurrent.atomic.AtomicReference
   import scala.concurrent.{Future, ExecutionContext}
   import scala.util.Random
   import akka.pattern.ask
