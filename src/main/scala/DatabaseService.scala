@@ -46,15 +46,13 @@
 
 
 
+
+
     def addUser(user: User): Future[Int] = {
       println(s"📌 Tentative d'insertion de : ${user}")
       db.run(UsersTable.table += user).map { result =>
         println(s"✅ Nombre de lignes insérées : $result")
         result
-      }.recover {
-        case e: Exception =>
-          println(s"❌ Erreur SQL lors de l'ajout d'utilisateur : ${e.getMessage}")
-          0
       }
     }
 
@@ -67,7 +65,6 @@
       db.run(table.filter(_.id === id).map(_.email).result.headOption).map(_.getOrElse(""))
 
     }
-
 
 
     def getId(email:String):Future[Int] = {
@@ -92,8 +89,6 @@
         .map(_.balance).result.headOption).map(_.getOrElse(BigDecimal(0)))
     }
 
-    import scala.concurrent.Future
-    import slick.jdbc.PostgresProfile.api._
 
     def updateSommeCompte(somme: BigDecimal, id: Int): Future[Int] = {
       println(s"🔄 [DB] Mise à jour du solde de l'utilisateur $id de +$somme")
@@ -110,9 +105,6 @@
           println(s"⚠️ [DB] Aucun utilisateur trouvé avec ID: $id")
         }
         rowsUpdated
-      }.recover { case e =>
-        println(s"❌ [DB] Erreur SQL lors de la mise à jour du solde: ${e.getMessage}")
-        0
       }
     }
 

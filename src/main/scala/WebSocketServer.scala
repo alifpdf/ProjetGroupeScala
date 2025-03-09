@@ -21,6 +21,12 @@ case class RecupererSommeRequest(companyName: String, userId: Int, sommeInvesti:
 object RecupererSommeRequest {
   implicit val format: Format[RecupererSommeRequest] = Json.format[RecupererSommeRequest]
 }
+case class Connexion(email: String, password: String)
+
+object Connexion{
+
+  implicit val format: Format[Connexion] = Json.format[Connexion]
+}
 
 case class AddUserRequest(name: String, email: String, password: String)
 object AddUserRequest {
@@ -37,11 +43,12 @@ class WebSocketServer(implicit system: ActorSystem, ec: ExecutionContext) {
       pathEndOrSingleSlash {
         complete(StatusCodes.OK, "✅ Serveur WebSocket en cours d'exécution. Connectez-vous sur /ws")
       },
-
+//on envoie au frontend
       path("ws") {
         handleWebSocketMessages(websocketFlow())
       },
 
+      //on récupère depuis le frontend
       path("api" / "recuperer-somme") {
         post {
           entity(as[String]) { body =>
@@ -74,7 +81,32 @@ class WebSocketServer(implicit system: ActorSystem, ec: ExecutionContext) {
             }
           }
         }
+        },
+      path("api" / "login") {
+        post {
+          entity(as[String]) { body =>
+            println(s"📢 [API] Requête de connexion reçue : $body")
+
+            Json.parse(body).validate[Connexion] match {
+              case JsSuccess(request, _) =>
+                println(s"✅ [API] Connexion de ${request.email}")
+
+                val futureResponse: Future[String] =
+                  (utilisateurActor ? UtilisateurActor.connexion(request.email, request.password))
+                    .mapTo[String]
+
+                complete(
+                  futureResponse.map(response =>
+                    Json.obj("success" -> !response.startsWith("❌"), "user" -> Json.parse(response)).toString()
+                  )
+                )
+
+             }
+          }
         }
+      }
+
+
 
 
     )

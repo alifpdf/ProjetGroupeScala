@@ -124,7 +124,7 @@ function RealTimeChart() {
                                 border: "none",
                                 borderRadius: "5px"
                             }}
-                        >
+                        > 
                             Récupérer
                         </button>
                     </li>

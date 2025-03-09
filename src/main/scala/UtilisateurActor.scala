@@ -1,8 +1,11 @@
+import Main.{timeout, utilisateurActor}
 import akka.actor.typed.ActorRef
 import akka.actor.{Actor, Props}
-import akka.pattern.pipe
+import akka.pattern.{ask, pipe}
+import play.api.libs.json.Json
 
 import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.Future
 import scala.util.{Failure, Success}
 
 // Définitions des messages pour l'Acteur
@@ -17,6 +20,7 @@ object UtilisateurActor {
   case class GetBalance(email: String)
   case class GetBalance1(id:Int)
   case class updateBalance(id: Int, balance: BigDecimal)
+  case class connexion(email: String, password: String)
 
     // Méthode pour créer un acteur
     def props(dbService: DatabaseService): Props = Props(new UtilisateurActor(dbService))
@@ -78,8 +82,6 @@ class UtilisateurActor(dbService: DatabaseService) extends Actor {
 
 
 
-
-
     case VerifierPassword(email, password) =>
       val senderRef = sender()
       dbService.checkPassword(email, password).onComplete{
@@ -91,6 +93,7 @@ class UtilisateurActor(dbService: DatabaseService) extends Actor {
       dbService.getsomme_restant(email).onComplete {
         case Success(balance) => senderRef ! balance
       }
+
 
     case GetBalance1(userId) =>
       val senderRef = sender()
@@ -107,6 +110,47 @@ class UtilisateurActor(dbService: DatabaseService) extends Actor {
       dbService.updateSommeCompte(amount, id).onComplete{
         case Success(_) => senderRef ! "success"
       }
+
+
+    case connexion(email, password) =>
+      val senderRef = sender()
+
+      // ✅ Vérifier le mot de passe
+      (utilisateurActor ? UtilisateurActor.VerifierPassword(email, password)).mapTo[Boolean].flatMap {
+        case true =>
+          println(s"✅ [Connexion] Mot de passe correct pour $email")
+
+          // ✅ Récupérer l'ID de l'utilisateur
+          (utilisateurActor ? UtilisateurActor.GetId(email)).mapTo[Int].flatMap {
+            case userId if userId > 0 =>
+              println(s"✅ [Connexion] ID utilisateur récupéré : $userId")
+
+              // ✅ Récupérer les informations utilisateur
+              (utilisateurActor ? UtilisateurActor.GetUser(userId)).mapTo[Option[User]].map {
+                case Some(user) =>
+                  val userJson = Json.obj(
+                    "id" -> user.id,
+                    "name" -> user.name,
+                    "email" -> user.email,
+                    "balance" -> user.balance
+                  ).toString()
+
+                  println(s"✅ [Connexion] Utilisateur trouvé : $userJson")
+                  senderRef ! userJson // ✅ Retourne l'utilisateur en `String JSON`
+              }
+
+          }
+
+        case false =>
+          println(s"❌ [Connexion] Mot de passe incorrect pour $email")
+          senderRef ! "❌ Mot de passe incorrect"
+          Future.successful(())
+      }.recover {
+        case e: Exception =>
+          println(s"❌ [Connexion] Erreur serveur : ${e.getMessage}")
+          senderRef ! "❌ Erreur interne du serveur"
+      }
+
 
 
   }
