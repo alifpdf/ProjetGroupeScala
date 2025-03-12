@@ -1,5 +1,5 @@
 import AkkaStream.{investments, updateInvestment, updateInvestmentByUsers}
-import akka.actor.ActorSystem
+import akka.actor.{ActorSystem, Props}
 import akka.pattern.ask
 import akka.util.Timeout
 import slick.jdbc.PostgresProfile.api._
@@ -49,11 +49,13 @@ object Main extends App {
   // 📌 Création du service de base de données
   val dbService = new DBUtilisateur(db) // ⚠️ Ajoute cette ligne
   val dbService1=new DBInvestment(db)
+  val dbService2=new DBNotification(db)
 
 
   //A tester
   val utilisateurActor = system.actorOf(UtilisateurActor.props(dbService), "UtilisateurActor")
   val utilisateurActor2=system.actorOf(InvestmentActor.props(dbService1,utilisateurActor), "InvestementActor")
+  val notificationActor = system.actorOf(SocketActor.props(dbService2), "SocketActor")
 
 
   println("resultat string")
@@ -165,8 +167,15 @@ object Main extends App {
   val server = new WebSocketServer()(system, ec)
     server.start()
 
-    // 📌 Lancer `npm start` dans `frontend`
-   startFrontend()
+  // ✅ Planification de l'envoi automatique après 15s
+
+      println("📢 Test : Envoi de 'Bonsoir à tous !' à tous les utilisateurs...")
+      notificationActor ? SocketActor.BroadcastMessage("🌙 Bonsoir à tous !")
+    // ✅ Ajoute `ec` pour éviter les erreurs Akka
+
+  // ✅ Planification du lancement du frontend après 20s
+
+      startFrontend()
 
 
 
@@ -179,6 +188,7 @@ object Main extends App {
 
 
     val process = Process(npmCommand, new java.io.File(frontendPath)).run()
+
 
 
     process.exitValue() // Attendre que le processus se termine (optionnel)

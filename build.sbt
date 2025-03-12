@@ -29,7 +29,8 @@ libraryDependencies ++= Seq(
   "com.typesafe.slick" %% "slick" % slickVersion,
   "com.typesafe.slick" %% "slick-hikaricp" % slickVersion,
   "org.postgresql" % "postgresql" % "42.7.5",
-  "com.typesafe.akka" %% "akka-slf4j" % akkaVersion
+  "com.typesafe.akka" %% "akka-slf4j" % akkaVersion,
+  "com.typesafe.play" %% "play-json" % "2.9.4"
 )
 
 

@@ -1,8 +1,8 @@
 import AkkaStream.websocketFlow
-import Main.{utilisateurActor, utilisateurActor2}
+import Main.{notificationActor, utilisateurActor, utilisateurActor2}
 import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
-import akka.http.scaladsl.model.StatusCodes
+import akka.http.scaladsl.model.{ContentTypes, HttpEntity, StatusCodes}
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Route
 import akka.pattern.ask
@@ -57,6 +57,7 @@ class WebSocketServer(implicit system: ActorSystem, ec: ExecutionContext) {
             Json.parse(body).validate[RecupererSommeRequest] match {
               case JsSuccess(request, _) =>
                 println(s"✅ Demande valide pour récupérer ${request.sommeInvesti}€ de ${request.companyName} (user: ${request.userId})")
+                notificationActor?SocketActor.SendNotification(request.userId,s"✅ Demande valide pour récupérer ${request.sommeInvesti}€ de ${request.companyName} (user: ${request.userId})")
 
                 complete(
                   (utilisateurActor2 ? InvestmentActor.RecupererlaSomme(request.companyName, request.userId, request.sommeInvesti)).mapTo[String].map(response => Json.obj("success" -> true, "message" -> response).toString()))
@@ -105,16 +106,49 @@ class WebSocketServer(implicit system: ActorSystem, ec: ExecutionContext) {
           }
         }
       },
-      path("api" / "get-investments") {
-        get {
-          complete(
-            (utilisateurActor2 ? InvestmentActor.GetAllInvestmentsString)
-              .mapTo[String]
-              .map(response => Json.obj("success" -> true, "investments" -> response).toString())
-          )
+
+      path("api" / "get-notifications") {
+        post {
+          entity(as[String]) { body =>
+            val json = Json.parse(body)
+            val userId = (json \ "userId").as[Int]
+
+            println(s"📢 Récupération des notifications pour l'utilisateur $userId")
+
+            val futureNotifications = (notificationActor ? SocketActor.GetNotifications(userId)).mapTo[Seq[Notification]]
+
+            onComplete(futureNotifications) {
+              case Success(notifs) =>
+                complete(HttpEntity(ContentTypes.`application/json`, Json.obj(
+                  "success" -> true,
+                  "notifications" -> Json.toJson(notifs) // ✅ Maintenant Play JSON sait comment convertir la liste en JSON
+                ).toString()))
+
+
+            }
+          }
+        }
+      },
+      path("api" / "delete-notification") {
+        post {
+          entity(as[String]) { body =>
+            val json = Json.parse(body)
+            val notificationId = (json \ "notificationId").as[Int]
+            val userId = (json \ "userId").as[Int] // ✅ Ajout de la récupération de l'ID utilisateur
+
+            println(s"🗑️ Suppression de la notification $notificationId pour l'utilisateur $userId")
+
+            val futureDelete = (notificationActor ? SocketActor.DeleteNotification(notificationId, userId)).mapTo[String]
+
+            onComplete(futureDelete) {
+              case Success(response) =>
+                complete(HttpEntity(ContentTypes.`application/json`, response))
+
+
+            }
+          }
         }
       }
-
 
 
 
