@@ -2,7 +2,7 @@ import Main.{dbService, ec, system, timeout, utilisateurActor, utilisateurActor2
 import akka.actor.ActorSystem
 import akka.stream.scaladsl.{Flow, Merge, Sink, Source}
 import akka.http.scaladsl.model.ws.{Message, TextMessage}
-import play.api.libs.json.{JsObject, Json}
+import play.api.libs.json.{JsNumber, JsObject, Json}
 
 import scala.math.BigDecimal.RoundingMode
 object AkkaStream {
@@ -99,13 +99,15 @@ object AkkaStream {
 
 
   def generateRandomNumberSource()(implicit system: ActorSystem, ec: ExecutionContext): Source[Message, Any] = {
-    Source.tick(1.second, 5.seconds, "").map { _ =>
-      val randomNumber = Random.nextInt(100) // Nombre aléatoire entre 0 et 99
+    Source.tick(1.second, 10.seconds, "").map { _ =>
       val jsonMessage = Json.obj(
-        "type" -> "random",
-        "data" -> randomNumber
+        "type"  -> "random",
+        "data"  -> JsNumber(BigDecimal(investments.getOrElse("TechCorp", 0).toString).toInt),  // ✅ Convertir en `Int`
+      "data1" -> JsNumber(BigDecimal(investments.getOrElse("Google", 0).toString).toInt),
+      "data2" -> JsNumber(BigDecimal(investments.getOrElse("Nasdaq", 0).toString).toInt)
       )
-      TextMessage(jsonMessage.toString()) // Envoie le nombre en WebSocket
+
+      TextMessage(jsonMessage.toString()) // ✅ Envoi sous forme de WebSocket Message
     }
   }
 
