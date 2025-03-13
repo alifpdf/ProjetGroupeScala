@@ -1,3 +1,4 @@
+import InvestmentsTable.table
 import play.api.libs.json.{Json, OFormat}
 import slick.jdbc.PostgresProfile.api._
 
@@ -61,6 +62,9 @@ class DBInvestment(db: Database)(implicit ec: ExecutionContext) {
 
 
 
+  def getInvestmentByUserAndCompany(userId: Int, companyName: String): Future[Option[Investment]] = {
+    db.run(table.filter(inv => inv.userId === userId && inv.companyName === companyName).result.headOption)
+  }
 
 
   // Supprimer un investissement

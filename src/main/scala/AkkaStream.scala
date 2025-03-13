@@ -46,7 +46,7 @@ object AkkaStream {
     // Mettre à jour les investissements avec de nouveaux prix
     synchronized {
       investments = investments.map { case (company, price) =>
-        val newPrice = Random.between(-30, 60) + price
+        val newPrice = Random.between(-2, 4) + price
         company -> newPrice
       }
     }

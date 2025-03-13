@@ -1,8 +1,7 @@
-import Main.timeout
+import Main.{timeout, utilisateurActor}
 import akka.actor.{Actor, ActorRef, Props}
 import akka.pattern.ask
 
-import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.util.{Failure, Success}
 import akka.pattern.pipe
@@ -16,6 +15,7 @@ object InvestmentActor {
   case class RecupererlaSomme(companyName:String,id:Int, amount:BigDecimal)
   case object GetAllInvestmentsString
 
+
   def props(dbService: DBInvestment, actor:ActorRef): Props = Props(new InvestmentActor(dbService,actor))
 }
 
@@ -27,30 +27,41 @@ class InvestmentActor(dbService: DBInvestment,actor: ActorRef) extends Actor {
   def receive: Receive = {
 
     case AddInvestment(userId, companyName, amount) =>
-      val senderRef = sender() // Sauvegarde du sender
+      val senderRef = sender()
 
       val result = for {
-        // 🔹 Étape 1 : Récupérer le solde actuel de l'utilisateur depuis `UtilisateurActor`
-        balance <- (actor ? UtilisateurActor.GetBalance1(userId)).mapTo[BigDecimal]
+        // 🔹 Étape 1 : Vérifier le solde de l'utilisateur
+        balance <- (utilisateurActor ? UtilisateurActor.GetBalance1(userId)).mapTo[BigDecimal]
         newBalance = balance - amount
 
-        // 🔹 Vérification du solde
+        // 🔹 Étape 2 : Vérifier si l'utilisateur a déjà investi dans cette entreprise
+        existingInvestmentOpt <- dbService.getInvestmentByUserAndCompany(userId, companyName)
+
+        // 🔹 Étape 3 : Vérifier si l'utilisateur a assez d'argent pour investir
         _ <- if (newBalance < 0) {
           println(s"❌ [InvestmentActor] Solde insuffisant pour investir $amount €")
-          Future.successful(senderRef ! "Échec : Solde insuffisant") // ✅ Répond immédiatement
+          Future.successful(senderRef ! "Échec : Solde insuffisant")
         } else {
-          (actor ? UtilisateurActor.updateBalance(userId, newBalance)).map(_ => ())
+          (utilisateurActor ? UtilisateurActor.updateBalance(userId, newBalance)).map(_ => ())
         }
 
-        _ = println(s"✅ [InvestmentActor] Nouveau solde après investissement : $newBalance €")
+        // 🔹 Étape 4 : Mise à jour ou ajout de l'investissement
+        _ <- existingInvestmentOpt match {
+          case Some(existingInvestment) =>
+            // ✅ Mise à jour du montant de l'investissement existant
+            val updatedAmount = existingInvestment.amountInvested + amount
+            dbService.updateInvestment(existingInvestment.id.get, companyName, updatedAmount)
+              .map(_ => println(s"✅ [InvestmentActor] Investissement mis à jour : $companyName -> $updatedAmount €"))
 
-        // 🔹 Étape 3 : Ajouter l’investissement en base de données
-        _ <- dbService.addInvestment(userId, companyName, amount)
-
+          case None =>
+            // ✅ Ajout d'un nouvel investissement
+            dbService.addInvestment(userId, companyName, amount)
+              .map(_ => println(s"✅ [InvestmentActor] Nouvel investissement ajouté pour $companyName"))
+        }
       } yield {
-        println(s"✅ [InvestmentActor] Investissement ajouté pour $companyName")
-        senderRef ! "✅ Succès : Investissement ajouté" // ✅ Répond immédiatement après l'ajout
+        senderRef ! "✅ Succès : Investissement ajouté ou mis à jour"
       }
+
       result
 
 
