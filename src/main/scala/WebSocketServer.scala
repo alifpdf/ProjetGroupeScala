@@ -150,6 +150,22 @@ class WebSocketServer(implicit system: ActorSystem, ec: ExecutionContext) {
             }
           }
         }
+      },
+      path("api" / "get-balance") {
+        post {
+          entity(as[String]) { body =>
+            val userId = (Json.parse(body) \ "userId").as[Int]
+            val futureBalance = (utilisateurActor ? UtilisateurActor.GetBalance1(userId)).mapTo[BigDecimal]
+
+            onComplete(futureBalance) {
+              case Success(balance) =>
+                complete(Json.obj("success" -> true, "balance" -> balance).toString())
+              case Failure(exception) =>
+                println(s"❌ Erreur lors de la récupération du solde : ${exception.getMessage}")
+                complete(Json.obj("success" -> false, "message" -> "Erreur lors de la récupération du solde").toString())
+            }
+          }
+        }
       }
     )
   }

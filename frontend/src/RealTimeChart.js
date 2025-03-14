@@ -16,6 +16,8 @@ function RealTimeChart() {
 
     const [investments, setInvestments] = useState([]);
     const [user, setUser] = useState(() => JSON.parse(localStorage.getItem("user")));
+    const [balance, setBalance] = useState(user ? user.balance : "Chargement..."); // Solde en attente initial
+    const [lockedBalance, setLockedBalance] = useState(user ? user.balance : null); // Balance verrouillée
 
     // 🔽 Menu déroulant pour choisir l'entreprise et le nombre d'actions
     const [selectedCompany, setSelectedCompany] = useState("TechCorp");
@@ -57,6 +59,9 @@ function RealTimeChart() {
                     if (user) {
                         const filteredInvestments = message.investments.filter(inv => inv.userId === user.id);
                         setInvestments(filteredInvestments);
+
+                        // Nous ne mettons pas à jour la balance directement ici, elle sera verrouillée
+                        // à moins qu'une action valide ne modifie le solde.
                     }
                 }
             } catch (error) {
@@ -105,7 +110,8 @@ function RealTimeChart() {
 
             if (data.success) {
                 alert(`✅ Investissement réussi : ${numShares} actions de ${selectedCompany} !`);
-                fetchUpdatedData();
+                fetchUpdatedData(); // Récupérer les données mises à jour après investissement
+                fetchBalance(); // Mettre à jour le solde après investissement
             } else {
                 alert("❌ Erreur : " + data.message);
             }
@@ -130,7 +136,8 @@ function RealTimeChart() {
 
             if (data.success) {
                 alert("✅ Somme récupérée avec succès !");
-                fetchUpdatedData();
+                fetchUpdatedData(); // Récupérer les données mises à jour après récupération
+                fetchBalance(); // Mettre à jour le solde après récupération
             }
         } catch (error) {
             console.error("❌ Erreur lors de la requête :", error);
@@ -139,7 +146,6 @@ function RealTimeChart() {
     };
 
     // 📌 Fonction pour récupérer les données mises à jour après investissement/récupération
-
     const fetchUpdatedData = async () => {
         try {
             const response = await fetch("http://localhost:8080/api/get-investments");
@@ -154,17 +160,49 @@ function RealTimeChart() {
                 setUser(updatedUser);
                 localStorage.setItem("user", JSON.stringify(updatedUser));
 
-                // 🔥 Déclencher un événement pour alerter `LoginForm.js`
-                window.dispatchEvent(new Event("balanceUpdated"));
+                // Mettre à jour la balance verrouillée seulement si la valeur a changé
+                if (lockedBalance !== message.updatedBalance) {
+                    setLockedBalance(message.updatedBalance);
+                }
             }
         } catch (error) {
             console.error("❌ Erreur lors de la récupération des données mises à jour :", error);
         }
     };
 
+    // 📌 Fonction pour récupérer le solde de l'utilisateur
+    const fetchBalance = async () => {
+        if (!user) return;
+        try {
+            const response = await fetch("http://localhost:8080/api/get-balance", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ userId: user.id })
+            });
+
+            const data = await response.json();
+            if (data.success) {
+                setBalance(data.balance);
+                const updatedUser = { ...user, balance: data.balance };
+                setUser(updatedUser);
+                localStorage.setItem("user", JSON.stringify(updatedUser));
+
+                // Verrouiller la balance après la récupération
+                if (lockedBalance !== data.balance) {
+                    setLockedBalance(data.balance);
+                }
+            }
+        } catch (error) {
+            console.error("❌ Erreur lors de la récupération du solde :", error);
+        }
+    };
 
     return (
         <div style={{ textAlign: "center", marginTop: "50px" }}>
+
+            {/* Affichage du solde utilisateur verrouillé */}
+            <h3>💰 Solde : {lockedBalance !== null ? `${lockedBalance}€` : "Chargement..."}</h3>
+
             <h2>📈 Valeurs en temps réel</h2>
             <p>TechCorp: {numberTechCorp}€</p>
             <p>Google: {numberGoogle}€</p>
@@ -193,7 +231,6 @@ function RealTimeChart() {
             <input type="number" min="1" value={numShares} onChange={(e) => setNumShares(parseInt(e.target.value) || 1)} />
             <button onClick={investir}>Investir</button>
 
-            <h2>📈 Portefeuille Utilisateur</h2>
             <ul>
                 {investments.map((inv, index) => (
                     <li key={inv.id || index}>
