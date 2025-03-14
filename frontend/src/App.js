@@ -2,6 +2,8 @@ import React, { useState, useEffect } from "react";
 import RealTimeChart from "./RealTimeChart";
 import SignUpForm from "./SignUpForm";
 import LoginForm from "./LoginForm";
+import InvestmentStrategies from "./InvestmentStrategies";
+
 
 function App() {
     const [page, setPage] = useState("home");
@@ -58,6 +60,7 @@ function App() {
                 <button onClick={() => setPage("login")}>Se connecter</button>
                 <button onClick={() => setPage("signup")}>S'inscrire</button>
                 <button onClick={() => setPage("chart")}>Voir le graphique</button>
+                <button onClick={() => setPage("strategy")}>Voir les strategies</button>
             </nav>
 
             {/* ✅ Affichage des pages */}
@@ -65,6 +68,7 @@ function App() {
             {page === "login" && <LoginForm />}
             {page === "signup" && <SignUpForm />}
             {page === "chart" && <RealTimeChart />}
+            {page === "strategy" && <InvestmentStrategies />}
         </div>
     );
 }

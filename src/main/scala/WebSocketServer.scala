@@ -160,16 +160,20 @@ class WebSocketServer(implicit system: ActorSystem, ec: ExecutionContext) {
 
     val futureInvestments = (utilisateurActor2 ? InvestmentActor.GetInvestments(userId)).mapTo[Seq[Investment]]
     val futureBalance = (utilisateurActor ? UtilisateurActor.GetBalance1(userId)).mapTo[BigDecimal]
+    val futureNAV = (utilisateurActor2 ? InvestmentActor.FetchNAV(userId)).mapTo[BigDecimal]
+    //val futureSharpeRatio = calculateSharpeRatio(userId) // 🔥 Fonction à implémenter
 
     for {
       investments <- futureInvestments
       balance <- futureBalance
+      nav <- futureNAV
     } yield {
       val updateMessage = Json.obj(
         "type" -> "update",
         "userId" -> userId,
         "balance" -> balance,
-        "investments" -> Json.toJson(investments)
+        "investments" -> Json.toJson(investments),
+        "nav" -> nav
       ).toString()
 
 

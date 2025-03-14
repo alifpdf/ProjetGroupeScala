@@ -32,11 +32,11 @@ CREATE TABLE notifications (
 
 -- Insertion d'un utilisateur avec un solde initial
 INSERT INTO users (name, email, password, balance)
-VALUES ('Alice', 'alice@example.com', 'password123', 100.00);
+VALUES ('Amo', 'amo@amo.com', '123', 100.00);
 
 -- Insertion d'un investissement pour Alice
 INSERT INTO investments (user_id, company_name, amount_invested)
-VALUES ((SELECT id FROM users WHERE email = 'alice@example.com'), 'TechCorp', 50.00);
+VALUES ((SELECT id FROM users WHERE email = 'amo@amo.com'), 'TechCorp', 50.00);
 -- Insertion d'une notification pour l'utilisateur avec ID 1
 INSERT INTO notifications (user_id, message)
 VALUES (1, 'Bienvenue sur notre plateforme ! Votre compte a été créé avec succès.');

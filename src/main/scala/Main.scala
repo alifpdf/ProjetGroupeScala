@@ -25,7 +25,7 @@ object Main extends App {
     val url = "jdbc:postgresql://localhost:5432/postgres?user=postgres&password=1234"
 
     // 📌 Exécuter le script SQL
-    val script = Source.fromFile("H:/ING2/scalaProjet/projetScalaGR/src/main/script.sql").mkString
+    val script = Source.fromFile("C:/Users/CYTech Student/IdeaProjects/ProjetGroupeScala/src/main/script.sql").mkString
     val conn = DriverManager.getConnection(url)
     val statement = conn.createStatement()
 
@@ -176,7 +176,7 @@ object Main extends App {
 
   // 📌 Fonction pour démarrer le frontend
   def startFrontend(): Unit = {
-    val frontendPath = "H:/ING2/scalaProjet/projetScalaGR/frontend"
+    val frontendPath = "C:/Users/CYTech Student/IdeaProjects/ProjetGroupeScala/frontend"
     val npmCommand = "cmd /c npm start" // Utilisation de cmd /c pour exécuter npm correctement
 
     println("🚀 Démarrage du frontend React...")

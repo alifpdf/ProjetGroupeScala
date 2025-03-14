@@ -114,6 +114,30 @@ function RealTimeChart() {
         }
     };
 
+    const updateBalance = async (userId, newBalance) => {
+        try {
+            const response = await fetch("http://localhost:8080/api/update-balance", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({ userId, newBalance })
+            });
+
+            const data = await response.json();
+            console.log("✅ Balance mise à jour :", data);
+
+            if (data.success) {
+                const updatedUser = { ...user, balance: newBalance };
+                setUser(updatedUser);
+                localStorage.setItem("user", JSON.stringify(updatedUser));
+                window.dispatchEvent(new Event("balanceUpdated")); // 🔄 Mise à jour globale
+            }
+        } catch (error) {
+            console.error("❌ Erreur lors de la mise à jour du solde :", error);
+        }
+    };
+
     // 📌 Fonction pour récupérer un investissement
     const recupererSomme = async (companyName, userId, sommeInvesti) => {
         try {
@@ -130,6 +154,9 @@ function RealTimeChart() {
 
             if (data.success) {
                 alert("✅ Somme récupérée avec succès !");
+                // MAJ balance bdd
+                const newBalance = user.balance + sommeInvesti;
+                await updateBalance(user.id, newBalance);
                 fetchUpdatedData();
             }
         } catch (error) {

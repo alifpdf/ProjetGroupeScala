@@ -14,6 +14,7 @@ object InvestmentActor {
   case class UpdateInvestment(investmentId: Int, companyName:String,newAmount: BigDecimal)
   case class RecupererlaSomme(companyName:String,id:Int, amount:BigDecimal)
   case object GetAllInvestmentsString
+  case class FetchNAV(userId:Int)
 
 
   def props(dbService: DBInvestment, actor:ActorRef): Props = Props(new InvestmentActor(dbService,actor))
@@ -123,6 +124,22 @@ class InvestmentActor(dbService: DBInvestment,actor: ActorRef) extends Actor {
 
       result.pipeTo(senderRef) // ✅ Envoie une réponse correcte
       // ✅ Envoie la réponse à `senderRef`
+
+
+    case FetchNAV(userId) =>
+      val senderRef = sender()
+
+      val result = for {
+        balance <- (utilisateurActor ? UtilisateurActor.GetBalance1(userId)).mapTo[BigDecimal]
+        investments <- dbService.getInvestmentsByUser(userId)
+        totalInvestmentValue = investments.foldLeft(BigDecimal(0))((acc, investment) => acc + investment.amountInvested)
+        nav = balance + totalInvestmentValue
+      } yield {
+        println(s"📊 NAV pour user $userId : $nav")
+        senderRef ! nav
+      }
+
+      result.pipeTo(senderRef)
 
 
 
