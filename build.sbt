@@ -34,5 +34,11 @@ libraryDependencies ++= Seq(
 )
 
 
+libraryDependencies ++= Seq(
+  "io.circe" %% "circe-core" % "0.14.1",
+  "io.circe" %% "circe-parser" % "0.14.1",
+  "io.circe" %% "circe-generic" % "0.14.1"
+)
+
 
 libraryDependencies += "ch.megard" %% "akka-http-cors" % "1.2.0"
