@@ -16,6 +16,11 @@ import scala.util.{Failure, Success}
 
 // 🔥 Augmente le délai d'attente pour éviter les erreurs
 
+case class InformerVolatile(userId: Int, strategy: String) // Changer 'message' par 'strategy'
+object InformerVolatile {
+  implicit val format: OFormat[InformerVolatile] = Json.format[InformerVolatile]
+}
+
 
 case class RecupererSommeRequest(companyName: String, userId: Int, sommeInvesti: BigDecimal)
 object RecupererSommeRequest {
@@ -166,7 +171,72 @@ class WebSocketServer(implicit system: ActorSystem, ec: ExecutionContext) {
             }
           }
         }
+      },
+      path("api" / "notify-strategy") {
+        post {
+          entity(as[String]) { body =>
+            // Parsing du JSON reçu pour obtenir la stratégie et l'ID utilisateur
+            Json.parse(body).validate[InformerVolatile] match {
+              case JsSuccess(request, _) =>
+                // Log de la notification envoyée
+                println(s"📢 Notification envoyée : ${request.strategy} à l'utilisateur ${request.userId}")
+
+                // Envoi de la notification via l'acteur notificationActor
+                val futureResponse: Future[String] = (notificationActor ? SocketActor.SendNotification(request.userId, request.strategy)).mapTo[String]
+
+                // Envoyer une réponse une fois la notification envoyée
+                onComplete(futureResponse) {
+                  case Success(response) =>
+                    complete(HttpEntity(ContentTypes.`application/json`, Json.obj("success" -> true, "message" -> response).toString()))
+                  case Failure(exception) =>
+                    // En cas d'erreur dans l'envoi de la notification
+                    println(s"❌ Erreur lors de l'envoi de la notification : ${exception.getMessage}")
+                    complete(HttpEntity(ContentTypes.`application/json`, Json.obj("success" -> false, "message" -> "Erreur lors de la notification").toString()))
+                }
+
+              case JsError(errors) =>
+                // Gestion des erreurs lors du parsing
+                val errorMessage = s"❌ Erreur lors du parsing de la notification : ${errors.mkString(", ")}"
+                println(errorMessage)
+
+                // Réponse en cas d'erreur de parsing
+                complete(HttpEntity(ContentTypes.`application/json`,
+                  Json.obj("success" -> false, "message" -> "Erreur lors de la notification").toString())
+                )
+            }
+          }
+        }
+      },
+
+      path("api" / "get-investments") {
+        post {
+          entity(as[String]) { body =>
+            val userId = (Json.parse(body) \ "userId").as[Int] // Récupérer l'ID utilisateur depuis le corps de la requête
+
+            // Récupérer les investissements de l'utilisateur via l'acteur utilisateurActor2
+            val futureInvestments = (utilisateurActor2 ? InvestmentActor.GetInvestments(userId)).mapTo[Seq[Investment]]
+
+            onComplete(futureInvestments) {
+              case Success(investments) =>
+                complete(HttpEntity(ContentTypes.`application/json`, Json.obj(
+                  "success" -> true,
+                  "investments" -> Json.toJson(investments)
+                ).toString()))
+
+              case Failure(exception) =>
+                println(s"❌ Erreur lors de la récupération des investissements : ${exception.getMessage}")
+                complete(HttpEntity(ContentTypes.`application/json`, Json.obj(
+                  "success" -> false,
+                  "message" -> "Erreur lors de la récupération des investissements"
+                ).toString()))
+            }
+          }
+        }
       }
+
+
+
+
     )
   }
 
@@ -174,13 +244,16 @@ class WebSocketServer(implicit system: ActorSystem, ec: ExecutionContext) {
   def updateFrontend(userId: Int): Unit = {
     println(s"🔄 Mise à jour du solde et des investissements pour l'utilisateur $userId")
 
+    // Effectuer les appels pour obtenir les investissements et la balance
     val futureInvestments = (utilisateurActor2 ? InvestmentActor.GetInvestments(userId)).mapTo[Seq[Investment]]
     val futureBalance = (utilisateurActor ? UtilisateurActor.GetBalance1(userId)).mapTo[BigDecimal]
 
+    // Une fois les deux résultats obtenus, envoyer la mise à jour au frontend
     for {
       investments <- futureInvestments
       balance <- futureBalance
     } yield {
+      // Créer un message JSON avec les informations des investissements et de la balance
       val updateMessage = Json.obj(
         "type" -> "update",
         "userId" -> userId,
@@ -192,6 +265,7 @@ class WebSocketServer(implicit system: ActorSystem, ec: ExecutionContext) {
       println(s"✅ Envoi de la mise à jour au frontend : $updateMessage")
     }
   }
+
 
   def start(): Unit = {
     Http().newServerAt("localhost", 8080).bind(route)

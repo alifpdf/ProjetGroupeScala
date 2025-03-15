@@ -119,8 +119,9 @@ function InvestmentStrategies() {
     // Définir une stratégie en fonction des indicateurs financiers
     const getInvestmentStrategy = () => {
         if (sharpeRatio > 1 && volatility < 0.2) {
-            return "🔵 Stratégie Défensive : Investissez dans des actifs sûrs (obligations, blue chips).";
+           return "🔵 Stratégie Défensive : Investissez dans des actifs sûrs (obligations, blue chips).";
         } else if (sharpeRatio > 1.5) {
+            notifyStrategy("🟢 Stratégie Équilibrée : Mélangez actions, ETF et crypto pour diversifier.")
             return "🟢 Stratégie Équilibrée : Mélangez actions, ETF et crypto pour diversifier.";
         } else if (sharpeRatio < 1 && volatility > 0.3) {
             return "🔴 Stratégie Agressive : Vous prenez trop de risques ! Diversifiez vos placements.";
@@ -137,6 +138,31 @@ function InvestmentStrategies() {
     // Vérifier si les données sont valides avant d'appeler `toFixed`
     const safeToFixed = (value, decimals = 2) => {
         return value !== undefined && value !== null ? value.toFixed(decimals) : "0.00";
+    };
+
+    // Fonction pour notifier la stratégie au backend
+    const notifyStrategy = async (strategy) => {
+         // Utilisateur connecté
+
+        const strategyMessage = {
+            strategy: strategy,
+            userId: user.id
+        };
+
+        try {
+            const response = await fetch("http://localhost:8080/api/notify-strategy", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify(strategyMessage)
+            });
+
+           await response.json();
+        } catch (error) {
+            console.error("❌ Erreur lors de la notification de la stratégie", error);
+            alert(`❌ Erreur lors de l'envoi de la notification : ${error.message}`);
+        }
     };
 
     return (

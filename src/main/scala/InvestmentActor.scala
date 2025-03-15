@@ -26,6 +26,8 @@ class InvestmentActor(dbService: DBInvestment,actor: ActorRef) extends Actor {
 
   def receive: Receive = {
 
+
+
     case AddInvestment(userId, companyName, amount) =>
       val senderRef = sender()
 
@@ -50,7 +52,7 @@ class InvestmentActor(dbService: DBInvestment,actor: ActorRef) extends Actor {
           case Some(existingInvestment) =>
             // ✅ Mise à jour du montant de l'investissement existant
             val updatedAmount = existingInvestment.amountInvested + amount
-            dbService.updateInvestment(existingInvestment.id.get, companyName, updatedAmount)
+            dbService.updateInvestment(userId, companyName, updatedAmount)
               .map(_ => println(s"✅ [InvestmentActor] Investissement mis à jour : $companyName -> $updatedAmount €"))
 
           case None =>
@@ -63,6 +65,8 @@ class InvestmentActor(dbService: DBInvestment,actor: ActorRef) extends Actor {
       }
 
       result
+
+
 
 
 

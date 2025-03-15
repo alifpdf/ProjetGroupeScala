@@ -5,13 +5,13 @@ import { Chart as ChartJS, LineElement, PointElement, LinearScale, CategoryScale
 ChartJS.register(LineElement, PointElement, LinearScale, CategoryScale);
 
 function RealTimeChart() {
-    const [numberTechCorp, setNumberTechCorp] = useState("En attente...");
-    const [numberGoogle, setNumberGoogle] = useState("En attente...");
-    const [numberNasdaq, setNumberNasdaq] = useState("En attente...");
+    const [numberBTC, setNumberBTC] = useState("En attente...");
+    const [numberETH, setNumberETH] = useState("En attente...");
+    const [numberDOGE, setNumberDOGE] = useState("En attente...");
 
-    const [dataTechCorp, setDataTechCorp] = useState([]);
-    const [dataGoogle, setDataGoogle] = useState([]);
-    const [dataNasdaq, setDataNasdaq] = useState([]);
+    const [dataBTC, setDataBTC] = useState([]);
+    const [dataETH, setDataETH] = useState([]);
+    const [dataDOGE, setDataDOGE] = useState([]);
     const [labels, setLabels] = useState([]);
 
     const [investments, setInvestments] = useState([]);
@@ -20,7 +20,7 @@ function RealTimeChart() {
     const [lockedBalance, setLockedBalance] = useState(user ? user.balance : null); // Balance verrouillée
 
     // 🔽 Menu déroulant pour choisir l'entreprise et le nombre d'actions
-    const [selectedCompany, setSelectedCompany] = useState("TechCorp");
+    const [selectedCompany, setSelectedCompany] = useState("BTC");
     const [numShares, setNumShares] = useState(1);
 
     useEffect(() => {
@@ -34,23 +34,23 @@ function RealTimeChart() {
                 console.log("📢 Message WebSocket reçu :", message);
 
                 if (message.type === "random") {
-                    const newTechCorp = parseFloat(message.data);
-                    const newGoogle = parseFloat(message.data1);
-                    const newNasdaq = parseFloat(message.data2);
+                    const newBTC = parseFloat(message.data);
+                    const newETH = parseFloat(message.data1);
+                    const newDOGE = parseFloat(message.data2);
 
-                    if (!isNaN(newTechCorp)) {
-                        setNumberTechCorp(newTechCorp);
-                        setDataTechCorp((prev) => [...prev.slice(-9), newTechCorp]);
+                    if (!isNaN(newBTC)) {
+                        setNumberBTC(newBTC);
+                        setDataBTC((prev) => [...prev.slice(-9), newBTC]);
                     }
 
-                    if (!isNaN(newGoogle)) {
-                        setNumberGoogle(newGoogle);
-                        setDataGoogle((prev) => [...prev.slice(-9), newGoogle]);
+                    if (!isNaN(newETH)) {
+                        setNumberETH(newETH);
+                        setDataETH((prev) => [...prev.slice(-9), newETH]);
                     }
 
-                    if (!isNaN(newNasdaq)) {
-                        setNumberNasdaq(newNasdaq);
-                        setDataNasdaq((prev) => [...prev.slice(-9), newNasdaq]);
+                    if (!isNaN(newDOGE)) {
+                        setNumberDOGE(newDOGE);
+                        setDataDOGE((prev) => [...prev.slice(-9), newDOGE]);
                     }
 
                     setLabels((prev) => [...prev.slice(-9), new Date().toLocaleTimeString()]);
@@ -77,13 +77,14 @@ function RealTimeChart() {
     // 📌 Fonction pour récupérer le prix actuel de l'action sélectionnée
     const getCurrentPrice = (company) => {
         switch (company) {
-            case "TechCorp": return numberTechCorp;
-            case "Google": return numberGoogle;
-            case "Nasdaq": return numberNasdaq;
+            case "BTC": return numberBTC;
+            case "ETH": return numberETH;
+            case "DOGE": return numberDOGE;
             default: return 0;
         }
     };
 
+    // 📌 Fonction pour investir
     // 📌 Fonction pour investir
     const investir = async () => {
         if (!user) {
@@ -110,8 +111,10 @@ function RealTimeChart() {
 
             if (data.success) {
                 alert(`✅ Investissement réussi : ${numShares} actions de ${selectedCompany} !`);
-                fetchUpdatedData(); // Récupérer les données mises à jour après investissement
-                fetchBalance(); // Mettre à jour le solde après investissement
+
+                // Mettre à jour les investissements après avoir investi
+                fetchUpdatedData();  // Met à jour les investissements
+                fetchBalance();  // Met à jour le solde après investissement
             } else {
                 alert("❌ Erreur : " + data.message);
             }
@@ -146,29 +149,42 @@ function RealTimeChart() {
     };
 
     // 📌 Fonction pour récupérer les données mises à jour après investissement/récupération
+    // 📌 Fonction pour récupérer les données mises à jour après investissement/récupération
     const fetchUpdatedData = async () => {
         try {
-            const response = await fetch("http://localhost:8080/api/get-investments");
+            const response = await fetch("http://localhost:8080/api/get-investments", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({ userId: user.id })  // Ajouter l'ID de l'utilisateur dans la requête
+            });
+
             const message = await response.json();
 
             console.log("📢 Mise à jour des données :", message);
-            setInvestments(Array.isArray(message.investments) ? message.investments : []);
+            if (message.success) {
+                setInvestments(Array.isArray(message.investments) ? message.investments : []);
 
-            // ✅ Mise à jour du solde utilisateur après investissement/récupération
-            if (message.updatedBalance !== undefined) {
-                const updatedUser = { ...user, balance: message.updatedBalance };
-                setUser(updatedUser);
-                localStorage.setItem("user", JSON.stringify(updatedUser));
+                // ✅ Mise à jour du solde utilisateur après investissement/récupération
+                if (message.updatedBalance !== undefined) {
+                    const updatedUser = { ...user, balance: message.updatedBalance };
+                    setUser(updatedUser);
+                    localStorage.setItem("user", JSON.stringify(updatedUser));
 
-                // Mettre à jour la balance verrouillée seulement si la valeur a changé
-                if (lockedBalance !== message.updatedBalance) {
-                    setLockedBalance(message.updatedBalance);
+                    // Mettre à jour la balance verrouillée seulement si la valeur a changé
+                    if (lockedBalance !== message.updatedBalance) {
+                        setLockedBalance(message.updatedBalance);
+                    }
                 }
+            } else {
+                console.error("❌ Erreur lors de la récupération des investissements :", message.message);
             }
         } catch (error) {
             console.error("❌ Erreur lors de la récupération des données mises à jour :", error);
         }
     };
+
 
     // 📌 Fonction pour récupérer le solde de l'utilisateur
     const fetchBalance = async () => {
@@ -204,9 +220,9 @@ function RealTimeChart() {
             <h3>💰 Solde : {lockedBalance !== null ? `${lockedBalance}€` : "Chargement..."}</h3>
 
             <h2>📈 Valeurs en temps réel</h2>
-            <p>TechCorp: {numberTechCorp}€</p>
-            <p>Google: {numberGoogle}€</p>
-            <p>Nasdaq: {numberNasdaq}€</p>
+            <p>BTC: {numberBTC}€</p>
+            <p>ETH: {numberETH}€</p>
+            <p>DOGE: {numberDOGE}€</p>
 
             <div style={{ width: "700px", margin: "auto" }}>
                 <h2>📊 Graphique en Temps Réel</h2>
@@ -214,9 +230,9 @@ function RealTimeChart() {
                     data={{
                         labels,
                         datasets: [
-                            { label: "TechCorp", data: dataTechCorp, borderColor: "blue", fill: false },
-                            { label: "Google", data: dataGoogle, borderColor: "red", fill: false },
-                            { label: "Nasdaq", data: dataNasdaq, borderColor: "green", fill: false }
+                            { label: "BTC", data: dataBTC, borderColor: "blue", fill: false },
+                            { label: "ETH", data: dataETH, borderColor: "red", fill: false },
+                            { label: "DOGE", data: dataDOGE, borderColor: "green", fill: false }
                         ]
                     }}
                 />
@@ -224,9 +240,9 @@ function RealTimeChart() {
 
             <h2>💰 Investir dans une action</h2>
             <select value={selectedCompany} onChange={(e) => setSelectedCompany(e.target.value)}>
-                <option value="TechCorp">TechCorp</option>
-                <option value="Google">Google</option>
-                <option value="Nasdaq">Nasdaq</option>
+                <option value="BTC">BTC</option>
+                <option value="ETH">ETH</option>
+                <option value="DOGE">DOGE</option>
             </select>
             <input type="number" min="1" value={numShares} onChange={(e) => setNumShares(parseInt(e.target.value) || 1)} />
             <button onClick={investir}>Investir</button>

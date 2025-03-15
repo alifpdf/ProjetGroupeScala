@@ -58,6 +58,40 @@ object Main extends App {
   val notificationActor = system.actorOf(SocketActor.props(dbService2), "SocketActor")
 
 
+
+  // First Investment
+  // First Investment
+  val firstInvestmentFuture: Future[String] = (utilisateurActor2 ? InvestmentActor.AddInvestment(1, "BTC", 10)).mapTo[String]
+
+  // Handle the first investment
+  firstInvestmentFuture.onComplete {
+    case Success(response) =>
+      println(s"✅ First investment added: $response")
+      // After the first investment is successful, perform the second investment
+      val secondInvestmentFuture: Future[String] = (utilisateurActor2 ? InvestmentActor.AddInvestment(1, "BTC", 30)).mapTo[String]
+
+      // Handle the second investment
+      secondInvestmentFuture.onComplete {
+        case Success(secondResponse) =>
+          println(s"✅ Second investment added: $secondResponse")
+        // Further actions after the second investment
+        case Failure(exception) =>
+          println(s"❌ Error adding second investment: ${exception.getMessage}")
+        // Handle failure for the second investment
+      }
+
+    case Failure(exception) =>
+      println(s"❌ Error adding first investment: ${exception.getMessage}")
+    // Handle failure for the first investment
+  }
+
+
+  // Function to add the second investment
+
+
+
+
+
   println("resultat string")
   (utilisateurActor ? UtilisateurActor.GetStringUsers).onComplete {
     case scala.util.Success(result) => println(s"📌 Réponse reçue : $result")
