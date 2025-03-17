@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from "react";
-import { Line } from "react-chartjs-2";
-import { Chart as ChartJS, LineElement, PointElement, LinearScale, CategoryScale } from "chart.js";
+import { Line, Pie } from "react-chartjs-2";
+import { Chart as ChartJS, LineElement, PointElement, LinearScale, CategoryScale, ArcElement, Tooltip, Legend } from "chart.js";
 
-ChartJS.register(LineElement, PointElement, LinearScale, CategoryScale);
+ChartJS.register(LineElement, PointElement, LinearScale, CategoryScale, ArcElement, Tooltip, Legend);
 
 function RealTimeChart() {
     const [numberBTC, setNumberBTC] = useState("En attente...");
@@ -16,12 +16,20 @@ function RealTimeChart() {
 
     const [investments, setInvestments] = useState([]);
     const [user, setUser] = useState(() => JSON.parse(localStorage.getItem("user")));
-    const [balance, setBalance] = useState(user ? user.balance : "Chargement..."); // Solde en attente initial
-    const [lockedBalance, setLockedBalance] = useState(user ? user.balance : null); // Balance verrouillée
+    const [balance, setBalance] = useState(user ? user.balance : "Chargement...");
+    const [lockedBalance, setLockedBalance] = useState(user ? user.balance : null);
 
-    // 🔽 Menu déroulant pour choisir l'entreprise et le nombre d'actions
     const [selectedCompany, setSelectedCompany] = useState("BTC");
     const [numShares, setNumShares] = useState(1);
+
+    const [investmentData, setInvestmentData] = useState({
+        labels: [],
+        datasets: [{
+            data: [],
+            backgroundColor: [],
+            hoverBackgroundColor: []
+        }]
+    });
 
     useEffect(() => {
         const ws = new WebSocket("ws://localhost:8080/ws");
@@ -60,8 +68,19 @@ function RealTimeChart() {
                         const filteredInvestments = message.investments.filter(inv => inv.userId === user.id);
                         setInvestments(filteredInvestments);
 
-                        // Nous ne mettons pas à jour la balance directement ici, elle sera verrouillée
-                        // à moins qu'une action valide ne modifie le solde.
+                        // Mettre à jour les données du graphique en camembert
+                        const investmentLabels = filteredInvestments.map(inv => inv.companyName);
+                        const investmentAmounts = filteredInvestments.map(inv => inv.amountInvested);
+                        const colors = ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40'];
+
+                        setInvestmentData({
+                            labels: investmentLabels,
+                            datasets: [{
+                                data: investmentAmounts,
+                                backgroundColor: colors.slice(0, investmentLabels.length),
+                                hoverBackgroundColor: colors.slice(0, investmentLabels.length)
+                            }]
+                        });
                     }
                 }
             } catch (error) {
@@ -74,7 +93,6 @@ function RealTimeChart() {
         return () => ws.close();
     }, [user]);
 
-    // 📌 Fonction pour récupérer le prix actuel de l'action sélectionnée
     const getCurrentPrice = (company) => {
         switch (company) {
             case "BTC": return numberBTC;
@@ -84,8 +102,6 @@ function RealTimeChart() {
         }
     };
 
-    // 📌 Fonction pour investir
-    // 📌 Fonction pour investir
     const investir = async () => {
         if (!user) {
             alert("❌ Vous devez être connecté pour investir.");
@@ -112,9 +128,8 @@ function RealTimeChart() {
             if (data.success) {
                 alert(`✅ Investissement réussi : ${numShares} actions de ${selectedCompany} !`);
 
-                // Mettre à jour les investissements après avoir investi
-                fetchUpdatedData();  // Met à jour les investissements
-                fetchBalance();  // Met à jour le solde après investissement
+                fetchUpdatedData();
+                fetchBalance();
             } else {
                 alert("❌ Erreur : " + data.message);
             }
@@ -123,7 +138,6 @@ function RealTimeChart() {
         }
     };
 
-    // 📌 Fonction pour récupérer un investissement
     const recupererSomme = async (companyName, userId, sommeInvesti) => {
         try {
             const response = await fetch("http://localhost:8080/api/recuperer-somme", {
@@ -139,8 +153,8 @@ function RealTimeChart() {
 
             if (data.success) {
                 alert("✅ Somme récupérée avec succès !");
-                fetchUpdatedData(); // Récupérer les données mises à jour après récupération
-                fetchBalance(); // Mettre à jour le solde après récupération
+                fetchUpdatedData();
+                fetchBalance();
             }
         } catch (error) {
             console.error("❌ Erreur lors de la requête :", error);
@@ -148,8 +162,6 @@ function RealTimeChart() {
         }
     };
 
-    // 📌 Fonction pour récupérer les données mises à jour après investissement/récupération
-    // 📌 Fonction pour récupérer les données mises à jour après investissement/récupération
     const fetchUpdatedData = async () => {
         try {
             const response = await fetch("http://localhost:8080/api/get-investments", {
@@ -157,7 +169,7 @@ function RealTimeChart() {
                 headers: {
                     "Content-Type": "application/json"
                 },
-                body: JSON.stringify({ userId: user.id })  // Ajouter l'ID de l'utilisateur dans la requête
+                body: JSON.stringify({ userId: user.id })
             });
 
             const message = await response.json();
@@ -166,13 +178,11 @@ function RealTimeChart() {
             if (message.success) {
                 setInvestments(Array.isArray(message.investments) ? message.investments : []);
 
-                // ✅ Mise à jour du solde utilisateur après investissement/récupération
                 if (message.updatedBalance !== undefined) {
                     const updatedUser = { ...user, balance: message.updatedBalance };
                     setUser(updatedUser);
                     localStorage.setItem("user", JSON.stringify(updatedUser));
 
-                    // Mettre à jour la balance verrouillée seulement si la valeur a changé
                     if (lockedBalance !== message.updatedBalance) {
                         setLockedBalance(message.updatedBalance);
                     }
@@ -185,8 +195,6 @@ function RealTimeChart() {
         }
     };
 
-
-    // 📌 Fonction pour récupérer le solde de l'utilisateur
     const fetchBalance = async () => {
         if (!user) return;
         try {
@@ -203,7 +211,6 @@ function RealTimeChart() {
                 setUser(updatedUser);
                 localStorage.setItem("user", JSON.stringify(updatedUser));
 
-                // Verrouiller la balance après la récupération
                 if (lockedBalance !== data.balance) {
                     setLockedBalance(data.balance);
                 }
@@ -215,8 +222,6 @@ function RealTimeChart() {
 
     return (
         <div style={{ textAlign: "center", marginTop: "50px" }}>
-
-            {/* Affichage du solde utilisateur verrouillé */}
             <h3>💰 Solde : {lockedBalance !== null ? `${lockedBalance}€` : "Chargement..."}</h3>
 
             <h2>📈 Valeurs en temps réel</h2>
@@ -247,16 +252,40 @@ function RealTimeChart() {
             <input type="number" min="1" value={numShares} onChange={(e) => setNumShares(parseInt(e.target.value) || 1)} />
             <button onClick={investir}>Investir</button>
 
-            <ul>
-                {investments.map((inv, index) => (
-                    <li key={inv.id || index}>
-                        {inv.companyName} - 💰 {inv.amountInvested}€
-                        <button onClick={() => recupererSomme(inv.companyName, inv.userId, inv.amountInvested)} style={{ marginLeft: "10px", backgroundColor: "red", color: "white", borderRadius: "5px" }}>
-                            Récupérer
-                        </button>
-                    </li>
-                ))}
-            </ul>
+            <div style={{ display: "flex", justifyContent: "space-around", marginTop: "20px" }}>
+                <ul style={{ listStyleType: "none", padding: 0 }}>
+                    {investments.map((inv, index) => (
+                        <li key={inv.id || index} style={{ marginBottom: "10px" }}>
+                            {inv.companyName} - 💰 {inv.amountInvested}€
+                            <button onClick={() => recupererSomme(inv.companyName, inv.userId, inv.amountInvested)} style={{ marginLeft: "10px", backgroundColor: "red", color: "white", borderRadius: "5px" }}>
+                                Récupérer
+                            </button>
+                        </li>
+                    ))}
+                </ul>
+                <div style={{ width: "300px", height: "300px" }}>
+                    <h2>🍰 Répartition des Investissements</h2>
+                    <Pie data={investmentData} options={{
+                        plugins: {
+                            tooltip: {
+                                callbacks: {
+                                    label: function (tooltipItem) {
+                                        const label = tooltipItem.label || '';
+                                        const value = tooltipItem.raw || 0;
+                                        const total = tooltipItem.dataset.data.reduce((acc, val) => acc + val, 0);
+                                        const percentage = ((value / total) * 100).toFixed(2);
+                                        return `${label}: ${value}€ (${percentage}%)`;
+                                    }
+                                }
+                            },
+                            legend: {
+                                display: true,
+                                position: 'bottom'
+                            }
+                        }
+                    }} />
+                </div>
+            </div>
         </div>
     );
 }
