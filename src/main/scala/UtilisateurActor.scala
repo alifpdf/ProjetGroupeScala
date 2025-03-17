@@ -51,8 +51,6 @@ class UtilisateurActor(dbService: DBUtilisateur) extends Actor {
       }
 
 
-
-
     case GetUser(id) =>
       val replyTo = sender
       dbService.getUser(id).pipeTo(replyTo)

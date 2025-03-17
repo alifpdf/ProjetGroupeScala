@@ -1,5 +1,6 @@
 import AkkaStream.websocketFlow
 import Main.{notificationActor, timeout, utilisateurActor, utilisateurActor2}
+import MarketstackDataFetcher.getLastMarketPrices
 import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.model.{ContentTypes, HttpEntity, StatusCodes}
@@ -142,7 +143,7 @@ class WebSocketServer(implicit system: ActorSystem, ec: ExecutionContext) {
 
             notificationActor ! SocketActor.SendNotification(userId, s"📢 Investissement : Utilisateur $userId achète $numShares actions de $companyName pour $amount €")
 
-            val futureInvestment = (utilisateurActor2 ? InvestmentActor.AddInvestment(userId, companyName, amount * numShares)).mapTo[String]
+            val futureInvestment = (utilisateurActor2 ? InvestmentActor.AddInvestment(userId, companyName, amount * numShares,amount)).mapTo[String]
 
             onComplete(futureInvestment) {
               case Success(response) =>
@@ -232,9 +233,26 @@ class WebSocketServer(implicit system: ActorSystem, ec: ExecutionContext) {
             }
           }
         }
+      },
+      path("api" / "get-last-prices") {
+        post {
+          val futureBtcPrices = getLastMarketPrices("BTC")
+          val futureEthPrices = getLastMarketPrices("ETH")
+          val futureDogePrices = getLastMarketPrices("DOGE")
+
+          onSuccess(futureBtcPrices.zip(futureEthPrices).zip(futureDogePrices)) {
+            case ((btcPrices, ethPrices), dogePrices) =>
+              complete(HttpEntity(ContentTypes.`application/json`, Json.obj(
+                "success" -> true,
+                "prices" -> Json.obj(
+                  "BTC" -> btcPrices,
+                  "ETH" -> ethPrices,
+                  "DOGE" -> dogePrices
+                )
+              ).toString()))
+          }
+        }
       }
-
-
 
 
     )

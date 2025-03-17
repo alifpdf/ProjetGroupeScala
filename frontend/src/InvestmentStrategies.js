@@ -9,6 +9,9 @@ function InvestmentStrategies() {
     const [ws, setWs] = useState(null); // WebSocket connection
     const [totalInvestments, setTotalInvestments] = useState(0); // Somme des investissements
     const [balance, setBalance] = useState(0); // Balance de l'utilisateur
+    const [btc, setBtc] = useState(0);
+    const [eth, setEth] = useState(0);
+    const [doge, setDoge] = useState(0);
 
     // Connexion au WebSocket dès que l'utilisateur est connecté
     useEffect(() => {
@@ -41,6 +44,15 @@ function InvestmentStrategies() {
                     } else {
                         console.error("❌ Investissements non trouvés:", data.investments);
                     }
+
+                }
+                if (data.type === "random") {
+                    const newBTC = parseFloat(data.data);
+                    const newETH = parseFloat(data.data1);
+                    const newDOGE = parseFloat(data.data2);
+                    setBtc(newBTC);
+                    setEth(newETH);
+                    setDoge(newDOGE);
                 }
             };
 
@@ -119,14 +131,23 @@ function InvestmentStrategies() {
     // Définir une stratégie en fonction des indicateurs financiers
     const getInvestmentStrategy = () => {
         if (sharpeRatio > 1 && volatility < 0.2) {
-           return "🔵 Stratégie Défensive : Investissez dans des actifs sûrs (obligations, blue chips).";
+            return "🔵 Stratégie Défensive : Investissez dans des actifs sûrs (obligations, blue chips).";
         } else if (sharpeRatio > 1.5) {
-            notifyStrategy("🟢 Stratégie Équilibrée : Mélangez actions, ETF et crypto pour diversifier.")
+            notifyStrategy("🟢 Stratégie Équilibrée : Mélangez actions, ETF et crypto pour diversifier.");
             return "🟢 Stratégie Équilibrée : Mélangez actions, ETF et crypto pour diversifier.";
         } else if (sharpeRatio < 1 && volatility > 0.3) {
             return "🔴 Stratégie Agressive : Vous prenez trop de risques ! Diversifiez vos placements.";
         } else {
             return "⚪ Stratégie Neutre : Continuez à surveiller vos investissements.";
+        }
+    };
+
+    const getCurrentPrice = (company) => {
+        switch (company) {
+            case "BTC": return btc;
+            case "ETH": return eth;
+            case "DOGE": return doge;
+            default: return 0;
         }
     };
 
@@ -142,8 +163,7 @@ function InvestmentStrategies() {
 
     // Fonction pour notifier la stratégie au backend
     const notifyStrategy = async (strategy) => {
-         // Utilisateur connecté
-
+        // Utilisateur connecté
         const strategyMessage = {
             strategy: strategy,
             userId: user.id
@@ -158,7 +178,7 @@ function InvestmentStrategies() {
                 body: JSON.stringify(strategyMessage)
             });
 
-           await response.json();
+            await response.json();
         } catch (error) {
             console.error("❌ Erreur lors de la notification de la stratégie", error);
             alert(`❌ Erreur lors de l'envoi de la notification : ${error.message}`);
@@ -183,11 +203,15 @@ function InvestmentStrategies() {
 
                     <h2>📋 Investissements Actuels</h2>
                     <ul>
-                        {investments.map((inv, index) => (
-                            <li key={inv.id || index}>
-                                {inv.companyName} - 💰 {inv.amountInvested}€
-                            </li>
-                        ))}
+                        {investments.map((inv, index) => {
+                            const currentPrice = getCurrentPrice(inv.companyName);
+                            const percentageChange = currentPrice ? ((currentPrice - inv.originalPrice) / inv.originalPrice) * 100 : 0;
+                            return (
+                                <li key={inv.id || index}>
+                                    {inv.companyName} - 💰 {inv.amountInvested}€ - {percentageChange.toFixed(2)}%
+                                </li>
+                            );
+                        })}
                     </ul>
                 </>
             ) : (

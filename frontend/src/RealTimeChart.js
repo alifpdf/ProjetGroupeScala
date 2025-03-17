@@ -32,6 +32,37 @@ function RealTimeChart() {
     });
 
     useEffect(() => {
+        // Fetch the latest prices on component mount
+        const fetchLastPrices = async () => {
+            try {
+                const response = await fetch("http://localhost:8080/api/get-last-prices", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" }
+                });
+                const data = await response.json();
+
+                if (data.success) {
+                    const { BTC, ETH, DOGE } = data.prices;
+
+                    setNumberBTC(BTC[BTC.length - 1]);
+                    setNumberETH(ETH[ETH.length - 1]);
+                    setNumberDOGE(DOGE[DOGE.length - 1]);
+
+                    setDataBTC(BTC);
+                    setDataETH(ETH);
+                    setDataDOGE(DOGE);
+
+                    setLabels(BTC.map((_, index) => new Date().toLocaleTimeString()));
+                }
+            } catch (error) {
+                console.error("❌ Erreur lors de la récupération des derniers prix :", error);
+            }
+        };
+
+        fetchLastPrices();
+    }, []);
+
+    useEffect(() => {
         const ws = new WebSocket("ws://localhost:8080/ws");
 
         ws.onopen = () => console.log("✅ WebSocket connecté !");
@@ -48,20 +79,20 @@ function RealTimeChart() {
 
                     if (!isNaN(newBTC)) {
                         setNumberBTC(newBTC);
-                        setDataBTC((prev) => [...prev.slice(-9), newBTC]);
+                        setDataBTC((prev) => [...prev, newBTC]);
                     }
 
                     if (!isNaN(newETH)) {
                         setNumberETH(newETH);
-                        setDataETH((prev) => [...prev.slice(-9), newETH]);
+                        setDataETH((prev) => [...prev, newETH]);
                     }
 
                     if (!isNaN(newDOGE)) {
                         setNumberDOGE(newDOGE);
-                        setDataDOGE((prev) => [...prev.slice(-9), newDOGE]);
+                        setDataDOGE((prev) => [...prev, newDOGE]);
                     }
 
-                    setLabels((prev) => [...prev.slice(-9), new Date().toLocaleTimeString()]);
+                    setLabels((prev) => [...prev, new Date().toLocaleTimeString()]);
                 } else if (message.type === "update") {
                     console.log("📢 Mise à jour reçue :", message);
                     if (user) {
@@ -258,7 +289,7 @@ function RealTimeChart() {
                         <ul style={{ listStyleType: "none", padding: 0 }}>
                             {investments.map((inv, index) => (
                                 <li key={inv.id || index} style={{ marginBottom: "10px" }}>
-                                    {inv.companyName} - 💰 {inv.amountInvested}€
+                                    {inv.companyName} - 💰 {inv.amountInvested}€ - {inv.originalPrice}
                                     <button onClick={() => recupererSomme(inv.companyName, inv.userId, inv.amountInvested)} style={{ marginLeft: "10px", backgroundColor: "red", color: "white", borderRadius: "5px" }}>
                                         Récupérer
                                     </button>

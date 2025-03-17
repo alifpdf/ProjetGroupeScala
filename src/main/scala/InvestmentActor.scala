@@ -7,7 +7,7 @@ import scala.util.{Failure, Success}
 import akka.pattern.pipe
 
 object InvestmentActor {
-  case class AddInvestment(userId: Int, companyName: String, amountInvested: BigDecimal)
+  case class AddInvestment(userId: Int, companyName: String, amountInvested: BigDecimal,originalPrice: BigDecimal)
   case class GetInvestments(userId: Int)
   case class GetInvestmentsString(userId: Int)
   case class DeleteInvestment(investmentId: Int,companyName:String)
@@ -28,7 +28,7 @@ class InvestmentActor(dbService: DBInvestment,actor: ActorRef) extends Actor {
 
 
 
-    case AddInvestment(userId, companyName, amount) =>
+    case AddInvestment(userId, companyName, amount,originalPrice) =>
       val senderRef = sender()
 
       val result = for {
@@ -57,7 +57,7 @@ class InvestmentActor(dbService: DBInvestment,actor: ActorRef) extends Actor {
 
           case None =>
             // ✅ Ajout d'un nouvel investissement
-            dbService.addInvestment(userId, companyName, amount/10)
+            dbService.addInvestment(userId, companyName, amount/10,originalPrice)
               .map(_ => println(s"✅ [InvestmentActor] Nouvel investissement ajouté pour $companyName"))
         }
       } yield {
@@ -65,9 +65,6 @@ class InvestmentActor(dbService: DBInvestment,actor: ActorRef) extends Actor {
       }
 
       result
-
-
-
 
 
 
@@ -81,8 +78,6 @@ class InvestmentActor(dbService: DBInvestment,actor: ActorRef) extends Actor {
           println(s"❌ Erreur lors de la récupération des investissements : ${e.getMessage}")
           senderRef ! "[]"
       }
-
-
 
 
     case GetInvestments(userId) =>

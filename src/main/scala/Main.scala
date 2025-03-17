@@ -61,14 +61,14 @@ object Main extends App {
 
   // First Investment
   // First Investment
-  val firstInvestmentFuture: Future[String] = (utilisateurActor2 ? InvestmentActor.AddInvestment(1, "BTC", 10)).mapTo[String]
+  val firstInvestmentFuture: Future[String] = (utilisateurActor2 ? InvestmentActor.AddInvestment(1, "BTC", 10,1)).mapTo[String]
 
   // Handle the first investment
   firstInvestmentFuture.onComplete {
     case Success(response) =>
       println(s"✅ First investment added: $response")
       // After the first investment is successful, perform the second investment
-      val secondInvestmentFuture: Future[String] = (utilisateurActor2 ? InvestmentActor.AddInvestment(1, "BTC", 30)).mapTo[String]
+      val secondInvestmentFuture: Future[String] = (utilisateurActor2 ? InvestmentActor.AddInvestment(1, "BTC", 30, 1)).mapTo[String]
 
       // Handle the second investment
       secondInvestmentFuture.onComplete {
@@ -80,10 +80,15 @@ object Main extends App {
         // Handle failure for the second investment
       }
 
-    case Failure(exception) =>
-      println(s"❌ Error adding first investment: ${exception.getMessage}")
-    // Handle failure for the first investment
   }
+
+
+
+
+
+
+
+
 
 
   // Function to add the second investment
@@ -100,9 +105,6 @@ object Main extends App {
 
 
   import scala.util.{Success, Failure}
-
-
-
 
 
 

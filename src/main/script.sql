@@ -18,7 +18,9 @@ CREATE TABLE investments (
                              user_id INT NOT NULL,
                              company_name VARCHAR(255) NOT NULL,
                              amount_invested DECIMAL(15,2) NOT NULL CHECK (amount_invested >= 0),
+                             original_price DECIMAL(15,2) NOT NULL CHECK (amount_invested >= 0),
                              FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+
 );
 
 CREATE TABLE notifications (
@@ -35,8 +37,8 @@ INSERT INTO users (name, email, password, balance)
 VALUES ('Alice', 'alice@example.com', 'password123', 100.00);
 
 -- Insertion d'un investissement pour Alice
-INSERT INTO investments (user_id, company_name, amount_invested)
-VALUES ((SELECT id FROM users WHERE email = 'alice@example.com'), 'TechCorp', 50.00);
+INSERT INTO investments (user_id, company_name, amount_invested,original_price)
+VALUES ((SELECT id FROM users WHERE email = 'alice@example.com'), 'TechCorp', 50.00,1);
 -- Insertion d'une notification pour l'utilisateur avec ID 1
 INSERT INTO notifications (user_id, message)
 VALUES (1, 'Bienvenue sur notre plateforme ! Votre compte a été créé avec succès.');

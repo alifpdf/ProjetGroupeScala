@@ -5,7 +5,7 @@ import slick.jdbc.PostgresProfile.api._
 import scala.concurrent.{ExecutionContext, Future}
 
 // Définition du modèle d'investissement
-case class Investment(id: Option[Int], userId: Int, companyName: String, amountInvested: BigDecimal)
+case class Investment(id: Option[Int], userId: Int, companyName: String, amountInvested: BigDecimal,originalPrice: BigDecimal)
 
 object Investment {
   implicit val investmentFormat: OFormat[Investment] = Json.format[Investment]
@@ -18,10 +18,11 @@ class InvestmentsTable(tag: Tag) extends Table[Investment](tag, "investments") {
   def userId = column[Int]("user_id")
   def companyName = column[String]("company_name")
   def amountInvested = column[BigDecimal]("amount_invested")
+  def originalPrice = column[BigDecimal]("original_price")
 
   def userFk = foreignKey("user_fk", userId, UsersTable.table)(_.id, onDelete = ForeignKeyAction.Cascade)
 
-  def * = (id.?, userId, companyName, amountInvested) <> (Investment.tupled, Investment.unapply)
+  def * = (id.?, userId, companyName, amountInvested,originalPrice) <> (Investment.tupled, Investment.unapply)
 }
 
 object InvestmentsTable {
@@ -32,8 +33,8 @@ object InvestmentsTable {
 class DBInvestment(db: Database)(implicit ec: ExecutionContext) {
 
   // Ajouter un investissement
-  def addInvestment(userId: Int, companyName: String, amountInvested: BigDecimal): Future[Int] = {
-    val newInvestment = Investment(None, userId, companyName, amountInvested)
+  def addInvestment(userId: Int, companyName: String, amountInvested: BigDecimal,originalPrice:BigDecimal): Future[Int] = {
+    val newInvestment = Investment(None, userId, companyName, amountInvested,originalPrice)
     db.run(InvestmentsTable.table += newInvestment)
   }
 
@@ -42,6 +43,8 @@ class DBInvestment(db: Database)(implicit ec: ExecutionContext) {
   def getInvestmentsByUser(userId: Int): Future[Seq[Investment]] = {
     db.run(InvestmentsTable.table.filter(_.userId === userId).result)
   }
+
+
 
   def getInvestmentsByUserString(userId: Int): Future[String] = {
     db.run(InvestmentsTable.table.filter(_.userId === userId).result).map { investments =>
