@@ -222,8 +222,6 @@ function RealTimeChart() {
 
     return (
         <div style={{ textAlign: "center", marginTop: "50px" }}>
-            <h3>💰 Solde : {lockedBalance !== null ? `${lockedBalance}€` : "Chargement..."}</h3>
-
             <h2>📈 Valeurs en temps réel</h2>
             <p>BTC: {numberBTC}€</p>
             <p>ETH: {numberETH}€</p>
@@ -243,49 +241,59 @@ function RealTimeChart() {
                 />
             </div>
 
-            <h2>💰 Investir dans une action</h2>
-            <select value={selectedCompany} onChange={(e) => setSelectedCompany(e.target.value)}>
-                <option value="BTC">BTC</option>
-                <option value="ETH">ETH</option>
-                <option value="DOGE">DOGE</option>
-            </select>
-            <input type="number" min="1" value={numShares} onChange={(e) => setNumShares(parseInt(e.target.value) || 1)} />
-            <button onClick={investir}>Investir</button>
+            {user ? (
+                <>
+                    <h3>💰 Solde : {lockedBalance !== null ? `${lockedBalance}€` : "Chargement..."}</h3>
 
-            <div style={{ display: "flex", justifyContent: "space-around", marginTop: "20px" }}>
-                <ul style={{ listStyleType: "none", padding: 0 }}>
-                    {investments.map((inv, index) => (
-                        <li key={inv.id || index} style={{ marginBottom: "10px" }}>
-                            {inv.companyName} - 💰 {inv.amountInvested}€
-                            <button onClick={() => recupererSomme(inv.companyName, inv.userId, inv.amountInvested)} style={{ marginLeft: "10px", backgroundColor: "red", color: "white", borderRadius: "5px" }}>
-                                Récupérer
-                            </button>
-                        </li>
-                    ))}
-                </ul>
-                <div style={{ width: "300px", height: "300px" }}>
-                    <h2>🍰 Répartition des Investissements</h2>
-                    <Pie data={investmentData} options={{
-                        plugins: {
-                            tooltip: {
-                                callbacks: {
-                                    label: function (tooltipItem) {
-                                        const label = tooltipItem.label || '';
-                                        const value = tooltipItem.raw || 0;
-                                        const total = tooltipItem.dataset.data.reduce((acc, val) => acc + val, 0);
-                                        const percentage = ((value / total) * 100).toFixed(2);
-                                        return `${label}: ${value}€ (${percentage}%)`;
+                    <h2>💰 Investir dans une action</h2>
+                    <select value={selectedCompany} onChange={(e) => setSelectedCompany(e.target.value)}>
+                        <option value="BTC">BTC</option>
+                        <option value="ETH">ETH</option>
+                        <option value="DOGE">DOGE</option>
+                    </select>
+                    <input type="number" min="1" value={numShares} onChange={(e) => setNumShares(parseInt(e.target.value) || 1)} />
+                    <button onClick={investir}>Investir</button>
+
+                    <div style={{ display: "flex", justifyContent: "space-around", marginTop: "20px" }}>
+                        <ul style={{ listStyleType: "none", padding: 0 }}>
+                            {investments.map((inv, index) => (
+                                <li key={inv.id || index} style={{ marginBottom: "10px" }}>
+                                    {inv.companyName} - 💰 {inv.amountInvested}€
+                                    <button onClick={() => recupererSomme(inv.companyName, inv.userId, inv.amountInvested)} style={{ marginLeft: "10px", backgroundColor: "red", color: "white", borderRadius: "5px" }}>
+                                        Récupérer
+                                    </button>
+                                </li>
+                            ))}
+                        </ul>
+                        <div style={{ width: "300px", height: "300px" }}>
+                            <h2>🍰 Répartition des Investissements</h2>
+                            <Pie data={investmentData} options={{
+                                plugins: {
+                                    tooltip: {
+                                        callbacks: {
+                                            label: function (tooltipItem) {
+                                                const label = tooltipItem.label || '';
+                                                const value = tooltipItem.raw || 0;
+                                                const total = tooltipItem.dataset.data.reduce((acc, val) => acc + val, 0);
+                                                const percentage = ((value / total) * 100).toFixed(2);
+                                                return `${label}: ${value}€ (${percentage}%)`;
+                                            }
+                                        }
+                                    },
+                                    legend: {
+                                        display: true,
+                                        position: 'bottom'
                                     }
                                 }
-                            },
-                            legend: {
-                                display: true,
-                                position: 'bottom'
-                            }
-                        }
-                    }} />
+                            }} />
+                        </div>
+                    </div>
+                </>
+            ) : (
+                <div>
+                    <h3>Veuillez vous connecter pour voir votre solde et vos investissements.</h3>
                 </div>
-            </div>
+            )}
         </div>
     );
 }
