@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import "./RealTimesChart.css";
 import { Line, Pie } from "react-chartjs-2";
 import { Chart as ChartJS, LineElement, PointElement, LinearScale, CategoryScale, ArcElement, Tooltip, Legend } from "chart.js";
 
@@ -134,17 +135,18 @@ function RealTimeChart() {
             return;
         }
 
-        const totalInvestment = getCurrentPrice(selectedCompany) * numShares;
+        const currentPrice = getCurrentPrice(selectedCompany);
+        const totalInvestment = currentPrice * numShares;
 
-
+        try {
             const response = await fetch("http://localhost:8080/api/investir", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                     userId: user.id,
                     companyName: selectedCompany,
-                    amount: totalInvestment,
-                    numShares
+                    amount: currentPrice,  // Prix unitaire (originalPrice dans le modèle Scala)
+                    numShares: numShares   // Nombre d'actions
                 })
             });
 
@@ -152,12 +154,16 @@ function RealTimeChart() {
             console.log("✅ Réponse du serveur :", data);
 
             if (data.success) {
-                alert(`✅ Investissement réussi : ${numShares} actions de ${selectedCompany} !`);
-
+                alert(`✅ Investissement réussi : ${numShares} actions de ${selectedCompany} pour un total de ${totalInvestment.toFixed(2)}€ !`);
                 fetchUpdatedData();
                 fetchBalance();
+            } else {
+                alert(`❌ Erreur : ${data.message}`);
             }
-
+        } catch (error) {
+            console.error("❌ Erreur lors de l'investissement:", error);
+            alert("❌ Une erreur est survenue lors de l'investissement.");
+        }
     };
 
     const recupererSomme = async (companyName, userId, sommeInvesti) => {

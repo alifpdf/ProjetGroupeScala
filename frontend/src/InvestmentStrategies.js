@@ -115,6 +115,7 @@ function InvestmentStrategies() {
 
         const rendements = investments.map(inv => {
             const price = inv.amountInvested; // Pour l'exemple, on utilise l'amountInvested
+            console.log(inv.amountInvested);
             const randomRendement = Math.random() * 0.1 - 0.05; // Le rendement aléatoire entre -5% et +5%
             return price * randomRendement; // Calcul du rendement
         });
@@ -205,7 +206,7 @@ function InvestmentStrategies() {
                     <ul>
                         {investments.map((inv, index) => {
                             const currentPrice = getCurrentPrice(inv.companyName);
-                            const percentageChange = currentPrice ? ((currentPrice - inv.originalPrice) / currentPrice) * 100 : 0;
+                            const percentageChange = currentPrice ? ((currentPrice - inv.originalPrice) / inv.originalPrice) * 100 : 0;
                             return (
                                 <li key={inv.id || index}>
                                     {inv.companyName} - 💰 {inv.amountInvested}€ - {percentageChange.toFixed(2)}%

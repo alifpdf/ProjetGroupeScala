@@ -1,5 +1,5 @@
 import AkkaStream.websocketFlow
-import Main.{notificationActor, timeout, utilisateurActor, utilisateurActor2}
+import Main.{notificationActor, productsActor, timeout, utilisateurActor, utilisateurActor2}
 import MarketstackDataFetcher.getLastMarketPrices
 import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
@@ -7,11 +7,11 @@ import akka.http.scaladsl.model.{ContentTypes, HttpEntity, StatusCodes}
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Route
 import akka.pattern.ask
-
 import ch.megard.akka.http.cors.scaladsl.CorsDirectives.cors
 import play.api.libs.json._
 
-import scala.concurrent.{ExecutionContext, Future}
+import java.time.LocalDateTime
+import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.util.{Failure, Success}
 
 // 🔥 Augmente le délai d'attente pour éviter les erreurs
@@ -142,12 +142,57 @@ class WebSocketServer(implicit system: ActorSystem, ec: ExecutionContext) {
 
             notificationActor ! SocketActor.SendNotification(userId, s"📢 Investissement : Utilisateur $userId achète $numShares actions de $companyName pour $amount €")
 
-            val futureInvestment = (utilisateurActor2 ? InvestmentActor.AddInvestment(userId, companyName, amount * numShares,amount)).mapTo[String]
+            val futureInvestment = (utilisateurActor2 ? InvestmentActor.AddInvestment(userId, companyName, amount * numShares, amount)).mapTo[String]
 
             onComplete(futureInvestment) {
+              case Success(response) if response.startsWith("✅") =>
+                // Extraire l'ID de l'investissement créé (supposons que la réponse contient un ID)
+                val investmentIdPattern = "ID: (\\d+)".r
+                val investmentId = investmentIdPattern.findFirstMatchIn(response)
+                  .map(_.group(1).toInt)
+                  .getOrElse {
+                    // Si on ne peut pas extraire l'ID, on utilise une requête pour le récupérer
+                    val futureInvestmentId = (utilisateurActor2 ? InvestmentActor.GetInvestments(userId)).mapTo[Int]
+                    Await.result(futureInvestmentId, timeout.duration)
+                  }
+
+                // Créer un nouveau produit
+                val product = Product(
+                  id = None,
+                  ownerId = userId,
+                  investmentId = investmentId,
+                  createdAt = LocalDateTime.now(),
+                  originalPrice = amount
+                )
+
+                // Ajouter le produit à la base de données
+                val futureProduct = (productsActor ? ProductsActor.AddProduct(userId, investmentId, amount)).mapTo[String]
+
+                // Gérer la réponse de la création du produit
+                onComplete(futureProduct) {
+                  case Success(productResponse) =>
+                    println(s"✅ Produit créé avec succès: $productResponse")
+                    updateFrontend(userId) // 🔥 Met à jour le solde et les investissements
+                    complete(Json.obj(
+                      "success" -> true,
+                      "message" -> response,
+                      "product" -> "Produit créé avec succès"
+                    ).toString())
+
+                  case Failure(productException) =>
+                    println(s"⚠️ Investissement réussi mais erreur lors de la création du produit : ${productException.getMessage}")
+                    updateFrontend(userId)
+                    complete(Json.obj(
+                      "success" -> true,
+                      "message" -> response,
+                      "product" -> s"Erreur lors de la création du produit: ${productException.getMessage}"
+                    ).toString())
+                }
+
               case Success(response) =>
-                updateFrontend(userId) // 🔥 Met à jour le solde et les investissements
-                complete(Json.obj("success" -> true, "message" -> response).toString())
+                // Si l'investissement a échoué
+                println(s"❌ Échec de l'investissement: $response")
+                complete(Json.obj("success" -> false, "message" -> response).toString())
 
               case Failure(exception) =>
                 println(s"❌ Erreur lors de l'investissement : ${exception.getMessage}")
@@ -156,6 +201,8 @@ class WebSocketServer(implicit system: ActorSystem, ec: ExecutionContext) {
           }
         }
       },
+
+
       path("api" / "get-balance") {
         post {
           entity(as[String]) { body =>

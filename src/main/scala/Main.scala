@@ -23,7 +23,7 @@ object Main extends App {
     val url = "jdbc:postgresql://localhost:5432/postgres?user=postgres&password=1234"
 
     // 📌 Exécuter le script SQL
-    val script = Source.fromFile("H:/ING2/scalaProjet/projetScalaGR/src/main/script.sql").mkString
+    val script = Source.fromFile("C:/Users/CYTech Student/IdeaProjects/ProjetGroupeScala/src/main/script.sql").mkString
     val conn = DriverManager.getConnection(url)
     val statement = conn.createStatement()
 
@@ -48,12 +48,14 @@ object Main extends App {
   val dbService = new DBUtilisateur(db) // ⚠️ Ajoute cette ligne
   val dbService1=new DBInvestment(db)
   val dbService2=new DBNotification(db)
+  val dbService3 = new DBProducts(db)
 
 
   //A tester
   val utilisateurActor = system.actorOf(UtilisateurActor.props(dbService), "UtilisateurActor")
   val utilisateurActor2=system.actorOf(InvestmentActor.props(dbService1,utilisateurActor), "InvestementActor")
   val notificationActor = system.actorOf(SocketActor.props(dbService2), "SocketActor")
+  val productsActor = system.actorOf(ProductsActor.props(dbService3), "ProductsActor")
 
 
 
@@ -210,7 +212,7 @@ object Main extends App {
 
   // 📌 Fonction pour démarrer le frontend
   def startFrontend(): Unit = {
-    val frontendPath = "H:/ING2/scalaProjet/projetScalaGR/frontend"
+    val frontendPath = "C:/Users/CYTech Student/IdeaProjects/ProjetGroupeScala/frontend"
     val npmCommand = "cmd /c npm start" // Utilisation de cmd /c pour exécuter npm correctement
 
     println("🚀 Démarrage du frontend React...")
