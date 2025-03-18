@@ -20,31 +20,33 @@ object MarketstackDataFetcher {
   def getLastMarketPrices(symbol: String): Future[List[Double]] = {
     val endpoint = "eod"
     val today = LocalDate.now()
-    val dateFrom = today.minusDays(30).format(DateTimeFormatter.ISO_LOCAL_DATE) // Adjust as needed
+    val dateFrom = today.minusDays(30).format(DateTimeFormatter.ISO_LOCAL_DATE)
     val url = s"$baseUrl/$endpoint?access_key=$apiKey&symbols=$symbol&date_from=$dateFrom&limit=6"
 
-    Http().singleRequest(HttpRequest(uri = url)).flatMap { response =>
-      Unmarshal(response.entity).to[String]
-    }.map { responseJson =>
+    for {
+      response     <- Http().singleRequest(HttpRequest(uri = url))
+      responseJson <- Unmarshal(response.entity).to[String]
+    } yield {
       val json = Json.parse(responseJson)
-      println(s"JSON Response: $json") // Print the JSON response for inspection
-      val data = (json \ "data").asOpt[JsArray]
+      println(s"JSON Response: $json") // Debug output
 
+      val data = (json \ "data").asOpt[JsArray]
       data match {
         case Some(arr) if arr.value.nonEmpty =>
           val sortedPrices = arr.value.map { item =>
             val date = (item \ "date").as[String]
-            val close = (item \ "close").asOpt[Double].getOrElse(0.5)/10 // Default to 0.5 if not available
+            val close = (item \ "close").asOpt[Double].getOrElse(0.5) / 10 // Default to 0.5 if missing
             (date, close)
-          }.sortBy(_._1).map(_._2).toList // Sort by date and extract prices
+          }.sortBy(_._1).map(_._2).toList
 
-          sortedPrices.take(6) // Ensure only 6 prices are returned
+          sortedPrices.take(6)
         case _ =>
           println(s"No data found for symbol: $symbol, initializing with default values.")
-          List.fill(6)(0.5) // Initialize with default values
+          List.fill(6)(0.5)
       }
     }
   }
+
 
   // Exemple d'appel pour récupérer les 6 dernières données de marché pour un symbole
   def getSymbolLastPrices(symbol: String): Unit = {
