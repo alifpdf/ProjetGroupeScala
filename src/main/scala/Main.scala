@@ -1,17 +1,15 @@
-import AkkaStream.{investments, updateInvestment, updateInvestmentByUsers}
+
 import akka.actor.{ActorSystem, Props}
 import akka.pattern.ask
 import akka.util.Timeout
 import slick.jdbc.PostgresProfile.api._
-import com.typesafe.config.ConfigFactory
-import slick.basic.DatabaseConfig
-import slick.jdbc.JdbcProfile
+
 
 import scala.concurrent.{ExecutionContext, Future}
 import java.sql.DriverManager
 import scala.io.Source
 import scala.sys.process._
-import scala.concurrent.duration._
+
 import scala.util.{Failure, Success}
 import scala.concurrent.duration.DurationInt
 

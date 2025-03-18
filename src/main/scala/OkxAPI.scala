@@ -2,10 +2,6 @@ import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.model._
 import akka.http.scaladsl.unmarshalling.Unmarshal
-import akka.stream.ActorMaterializer
-import javax.crypto.Mac
-import javax.crypto.spec.SecretKeySpec
-import java.util.Base64
 import scala.concurrent.{Future, ExecutionContext}
 import play.api.libs.json._
 
@@ -58,7 +54,8 @@ object OkxAPI {
     getPrices()
 
     getPrice("BTC-USDT").map { price =>
-      println(s"Prix actuel de BTC-USD : $price USD")
+      val adjustedPrice = price / 1.09
+      println(s"Prix actuel de BTC-USD : $adjustedPrice EUR USDT")
     }.recover {
       case ex: Exception => println(s"Erreur lors de la récupération du prix de BTC : ${ex.getMessage}")
     }

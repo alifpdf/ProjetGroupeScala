@@ -2,7 +2,7 @@ import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.model._
 import akka.http.scaladsl.unmarshalling.Unmarshal
-import akka.stream.ActorMaterializer
+
 import scala.concurrent.{Future, ExecutionContext}
 import play.api.libs.json._
 import java.time.LocalDate
@@ -35,7 +35,7 @@ object MarketstackDataFetcher {
         case Some(arr) if arr.value.nonEmpty =>
           val sortedPrices = arr.value.map { item =>
             val date = (item \ "date").as[String]
-            val close = (item \ "close").asOpt[Double].getOrElse(0.5) / 10 // Default to 0.5 if missing
+            val close = (item \ "close").asOpt[Double].getOrElse(0.5) *(1.09/ 10) // Default to 0.5 if missing
             (date, close)
           }.sortBy(_._1).map(_._2).toList
 
@@ -62,7 +62,7 @@ object MarketstackDataFetcher {
     println("📩 Démarrage du test de récupération des données de marché...")
 
     // Appeler la fonction pour récupérer les 6 derniers prix de marché pour DOGE
-    getSymbolLastPrices("DOGE")
+    getSymbolLastPrices("BTC")
 
     // Attendre quelques secondes pour laisser le temps à la requête de s'exécuter
     Thread.sleep(5000)

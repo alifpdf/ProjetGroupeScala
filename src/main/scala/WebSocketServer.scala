@@ -7,12 +7,11 @@ import akka.http.scaladsl.model.{ContentTypes, HttpEntity, StatusCodes}
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Route
 import akka.pattern.ask
-import akka.util.Timeout
+
 import ch.megard.akka.http.cors.scaladsl.CorsDirectives.cors
 import play.api.libs.json._
 
 import scala.concurrent.{ExecutionContext, Future}
-import scala.concurrent.duration._
 import scala.util.{Failure, Success}
 
 // 🔥 Augmente le délai d'attente pour éviter les erreurs

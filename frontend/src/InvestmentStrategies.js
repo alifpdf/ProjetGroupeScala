@@ -205,7 +205,7 @@ function InvestmentStrategies() {
                     <ul>
                         {investments.map((inv, index) => {
                             const currentPrice = getCurrentPrice(inv.companyName);
-                            const percentageChange = currentPrice ? ((currentPrice - inv.originalPrice) / inv.originalPrice) * 100 : 0;
+                            const percentageChange = currentPrice ? ((currentPrice - inv.originalPrice) / currentPrice) * 100 : 0;
                             return (
                                 <li key={inv.id || index}>
                                     {inv.companyName} - 💰 {inv.amountInvested}€ - {percentageChange.toFixed(2)}%

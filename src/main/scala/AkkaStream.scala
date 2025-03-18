@@ -1,21 +1,16 @@
-import Main.{dbService, ec, system, timeout, utilisateurActor, utilisateurActor2}
+import Main.{ ec, timeout, utilisateurActor, utilisateurActor2}
 import OkxAPI.getPrice
 import akka.actor.ActorSystem
 import akka.stream.scaladsl.{Flow, Merge, Sink, Source}
 import akka.http.scaladsl.model.ws.{Message, TextMessage}
-import play.api.libs.json.{JsNumber, JsObject, Json}
-import io.circe.parser.parse
-import akka.http.scaladsl.model.ws.TextMessage
+import play.api.libs.json.{JsNumber, Json}
+
 
 import scala.math.BigDecimal.RoundingMode
-import akka.http.scaladsl.Http
-import akka.http.scaladsl.model.HttpRequest
-import akka.http.scaladsl.unmarshalling.Unmarshal
 
 
 object AkkaStream {
   import scala.concurrent.{Future, ExecutionContext}
-  import scala.util.Random
   import akka.pattern.ask
   import scala.concurrent.duration._
 
@@ -68,7 +63,7 @@ object AkkaStream {
     } yield {
       synchronized {
         investments = investments.map {
-          case ("BTC-USD", price) => "BTC-USD" -> btcPrice/80000.0
+          case ("BTC-USD", price) => "BTC-USD" -> btcPrice/10000.0
           case ("ETH-USD", price) => "ETH-USD" -> ethPrice/1000.0
           case ("DOGE-USD", price) => "DOGE-USD" -> dogePrice
           case (company, price) => company -> price // Garder l'ancien prix pour les autres entreprises si nécessaire
@@ -77,6 +72,8 @@ object AkkaStream {
 
       println(s"Prix mis à jour : BTC: $btcPrice, ETH: $ethPrice, DOGE: $dogePrice")
     }
+   
+
 
     // Récupérer tous les utilisateurs
     (utilisateurActor ? UtilisateurActor.GetUsers).mapTo[Seq[User]].flatMap { users =>

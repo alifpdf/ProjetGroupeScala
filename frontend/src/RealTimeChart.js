@@ -34,7 +34,7 @@ function RealTimeChart() {
     useEffect(() => {
         // Fetch the latest prices on component mount
         const fetchLastPrices = async () => {
-            try {
+
                 const response = await fetch("http://localhost:8080/api/get-last-prices", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" }
@@ -54,9 +54,7 @@ function RealTimeChart() {
 
                     setLabels(BTC.map((_, index) => new Date().toLocaleTimeString()));
                 }
-            } catch (error) {
-                console.error("❌ Erreur lors de la récupération des derniers prix :", error);
-            }
+
         };
 
         fetchLastPrices();
@@ -68,7 +66,7 @@ function RealTimeChart() {
         ws.onopen = () => console.log("✅ WebSocket connecté !");
 
         ws.onmessage = (event) => {
-            try {
+
                 const message = JSON.parse(event.data);
                 console.log("📢 Message WebSocket reçu :", message);
 
@@ -114,12 +112,9 @@ function RealTimeChart() {
                         });
                     }
                 }
-            } catch (error) {
-                console.error("❌ Erreur de parsing JSON :", error);
-            }
+
         };
 
-        ws.onerror = (error) => console.error("❌ Erreur WebSocket :", error);
 
         return () => ws.close();
     }, [user]);
@@ -141,7 +136,7 @@ function RealTimeChart() {
 
         const totalInvestment = getCurrentPrice(selectedCompany) * numShares;
 
-        try {
+
             const response = await fetch("http://localhost:8080/api/investir", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
@@ -161,16 +156,12 @@ function RealTimeChart() {
 
                 fetchUpdatedData();
                 fetchBalance();
-            } else {
-                alert("❌ Erreur : " + data.message);
             }
-        } catch (error) {
-            console.error("❌ Erreur lors de la requête :", error);
-        }
+
     };
 
     const recupererSomme = async (companyName, userId, sommeInvesti) => {
-        try {
+
             const response = await fetch("http://localhost:8080/api/recuperer-somme", {
                 method: "POST",
                 headers: {
@@ -187,14 +178,11 @@ function RealTimeChart() {
                 fetchUpdatedData();
                 fetchBalance();
             }
-        } catch (error) {
-            console.error("❌ Erreur lors de la requête :", error);
-            alert("❌ Une erreur s'est produite.");
-        }
+
     };
 
     const fetchUpdatedData = async () => {
-        try {
+
             const response = await fetch("http://localhost:8080/api/get-investments", {
                 method: "POST",
                 headers: {
@@ -218,17 +206,13 @@ function RealTimeChart() {
                         setLockedBalance(message.updatedBalance);
                     }
                 }
-            } else {
-                console.error("❌ Erreur lors de la récupération des investissements :", message.message);
             }
-        } catch (error) {
-            console.error("❌ Erreur lors de la récupération des données mises à jour :", error);
-        }
+
     };
 
     const fetchBalance = async () => {
         if (!user) return;
-        try {
+
             const response = await fetch("http://localhost:8080/api/get-balance", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
@@ -246,9 +230,7 @@ function RealTimeChart() {
                     setLockedBalance(data.balance);
                 }
             }
-        } catch (error) {
-            console.error("❌ Erreur lors de la récupération du solde :", error);
-        }
+
     };
 
     return (
