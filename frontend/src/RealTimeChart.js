@@ -1,8 +1,28 @@
 import React, { useState, useEffect } from "react";
-import { Line, Pie } from "react-chartjs-2";
-import { Chart as ChartJS, LineElement, PointElement, LinearScale, CategoryScale, ArcElement, Tooltip, Legend } from "chart.js";
+import { Line, Pie, Bar } from "react-chartjs-2";
+import {
+    Chart as ChartJS,
+    LineElement,
+    PointElement,
+    LinearScale,
+    CategoryScale,
+    ArcElement,
+    Tooltip,
+    Legend,
+    BarElement,   // 👈 Ajouté
+} from "chart.js";
 
-ChartJS.register(LineElement, PointElement, LinearScale, CategoryScale, ArcElement, Tooltip, Legend);
+ChartJS.register(
+    LineElement,
+    PointElement,
+    LinearScale,
+    CategoryScale,
+    ArcElement,
+    Tooltip,
+    Legend,
+    BarElement      // 👈 Enregistrement ajouté
+);
+
 
 function RealTimeChart() {
     const [numberBTC, setNumberBTC] = useState("En attente...");
@@ -21,6 +41,8 @@ function RealTimeChart() {
 
     const [selectedCompany, setSelectedCompany] = useState("BTC");
     const [numShares, setNumShares] = useState(1);
+    const [ratios, setRatios] = useState({ BTC: 0, ETH: 0, DOGE: 0 });
+
 
     const [investmentData, setInvestmentData] = useState({
         labels: [],
@@ -127,6 +149,32 @@ function RealTimeChart() {
             default: return 0;
         }
     };
+    const fetchCalculatedSum = async () => {
+        if (!user) return;
+        try {
+            const response = await fetch("http://localhost:8080/api/calculate-sum", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    userId: user.id,
+                    btcPrice: numberBTC,
+                    ethPrice: numberETH,
+                    dogePrice: numberDOGE
+                })
+            });
+            const data = await response.json();
+            if (data.success) {
+                setRatios({
+                    BTC: data.BTC_ratio_sum.toFixed(2),
+                    ETH: data.ETH_ratio_sum.toFixed(2),
+                    DOGE: data.DOGE_ratio_sum.toFixed(2)
+                });
+            }
+        } catch (err) {
+            console.error("❌ Erreur calculate-sum :", err);
+        }
+    };
+
 
     const investir = async () => {
         if (!user) {
@@ -156,6 +204,8 @@ function RealTimeChart() {
 
                 fetchUpdatedData();
                 fetchBalance();
+                fetchCalculatedSum();  // 🔥 Mets à jour les ratios automatiquement
+
             }
 
     };
@@ -253,6 +303,43 @@ function RealTimeChart() {
                     }}
                 />
             </div>
+
+            <div style={{ marginTop: "20px" }}>
+                <h2>📈 Ratios Calculés (Auto)</h2>
+                <p>BTC Ratio: {ratios.BTC}</p>
+                <p>ETH Ratio: {ratios.ETH}</p>
+                <p>DOGE Ratio: {ratios.DOGE}</p>
+            </div>
+            <div style={{ width: "600px", margin: "20px auto" }}>
+                <h2>📊 Visualisation des Ratios</h2>
+                <Bar
+                    data={{
+                        labels: ["BTC", "ETH", "DOGE"],
+                        datasets: [
+                            {
+                                label: "Ratios Calculés",
+                                data: [ratios.BTC, ratios.ETH, ratios.DOGE],
+                                backgroundColor: ["#FF6384", "#36A2EB", "#FFCE56"],
+                                borderRadius: 5,
+                            },
+                        ],
+                    }}
+                    options={{
+                        responsive: true,
+                        plugins: {
+                            legend: { display: false },
+                            tooltip: { enabled: true }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true
+                            }
+                        }
+                    }}
+                />
+            </div>
+
+
 
             {user ? (
                 <>

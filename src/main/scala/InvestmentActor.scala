@@ -57,7 +57,7 @@ class InvestmentActor(dbService: DBInvestment,actor: ActorRef) extends Actor {
             }
 
           case None =>
-            dbService.addInvestment(userId, companyName, amount / 10, originalPrice).map { newId =>
+            dbService.addInvestment(userId, companyName, amount, originalPrice).map { newId =>
               println(s"✅ [InvestmentActor] Nouvel investissement ajouté pour $companyName avec ID $newId")
               newId // Retourne l'ID du nouvel investissement
             }
