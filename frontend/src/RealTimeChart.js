@@ -20,7 +20,8 @@ ChartJS.register(
     ArcElement,
     Tooltip,
     Legend,
-    BarElement      // 👈 Enregistrement ajouté
+    BarElement
+    // 👈 Enregistrement ajouté
 );
 
 

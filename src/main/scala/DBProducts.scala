@@ -85,6 +85,7 @@ class DBProducts(db: Database)(implicit ec: ExecutionContext) {
   def getProductsByOwner(ownerId: Int): Future[Seq[Product]] = {
     println(s"📊 [DBProducts] Récupération des produits du propriétaire ID: $ownerId")
     db.run(ProductsTable.table.filter(_.ownerId === ownerId).result)
+
   }
 
   // Récupérer les produits par propriétaire au format JSON

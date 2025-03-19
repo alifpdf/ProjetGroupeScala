@@ -56,6 +56,7 @@ class ProductsActor(dbService: DBProducts) extends Actor {
     case GetProductsByOwner(ownerId) =>
       val originalSender = sender()
       println(s"📢 [ProductsActor] Produits par Owner ID: $ownerId")
+
       dbService.getProductsByOwner(ownerId).pipeTo(originalSender)
 
     case GetProductsByOwnerString(ownerId) =>
