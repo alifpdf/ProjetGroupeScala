@@ -17,7 +17,8 @@ import scala.concurrent.duration.DurationInt
 
 
 
-object Main extends App {
+
+object Main extends {
 
 
     val url = "jdbc:postgresql://localhost:5432/postgres?user=postgres&password=1234"
@@ -194,18 +195,10 @@ object Main extends App {
       case Success(true)=>println("code correct")
     }*/
 
-  val server = new WebSocketServer()(system, ec)
-   server.start()
 
-  // ✅ Planification de l'envoi automatique après 15s
 
-      println("📢 Test : Envoi de 'Bonsoir à tous !' à tous les utilisateurs...")
-      notificationActor ? SocketActor.BroadcastMessage("🌙 Bonsoir à tous !")
-    // ✅ Ajoute `ec` pour éviter les erreurs Akka
 
-  // ✅ Planification du lancement du frontend après 20s
 
-  startFrontend()
 
 
 
@@ -224,4 +217,21 @@ object Main extends App {
     process.exitValue() // Attendre que le processus se termine (optionnel)
 
   }
+
+  def main(args: Array[String]): Unit = {
+
+    val server = new WebSocketServer()(system, ec)
+    server.start()
+
+    // ✅ Planification de l'envoi automatique après 15s
+
+    println("📢 Test : Envoi de 'Bonsoir à tous !' à tous les utilisateurs...")
+    notificationActor ? SocketActor.BroadcastMessage("🌙 Bonsoir à tous !")
+    // ✅ Ajoute `ec` pour éviter les erreurs Akka
+
+    // ✅ Planification du lancement du frontend après 20s
+
+    startFrontend()
+  }
+
 }

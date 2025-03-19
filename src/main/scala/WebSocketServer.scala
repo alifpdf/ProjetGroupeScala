@@ -65,9 +65,7 @@
                       updateFrontend(request.userId) // 🔥 Met à jour le solde et les investissements
                       complete(Json.obj("success" -> true, "message" -> response).toString())
 
-                    case Failure(exception) =>
-                      println(s"❌ Erreur lors de la récupération : ${exception.getMessage}")
-                      complete(Json.obj("success" -> false, "message" -> "Erreur lors de la récupération").toString())
+
                   }
               }
             }
