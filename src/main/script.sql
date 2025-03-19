@@ -36,7 +36,8 @@ CREATE TABLE products (
                           owner_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
                           investment_id INT NOT NULL REFERENCES investments(id) ON DELETE CASCADE,
                           created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                          original_price NUMERIC(10,2) NOT NULL
+                          original_price NUMERIC(10,2) NOT NULL,
+                          entreprise VARCHAR(150)  NOT NULL
 );
 
 -- Insertion d'un utilisateur avec un solde initial

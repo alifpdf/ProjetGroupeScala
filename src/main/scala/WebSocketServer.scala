@@ -149,7 +149,7 @@
                 investmentIdOpt match {
                   case Some(investmentId) =>
                     // ✅ Ajouter le produit
-                    (productsActor ? ProductsActor.AddProduct(userId, investmentId, amount)).mapTo[String].map { productResponse =>
+                    (productsActor ? ProductsActor.AddProduct(userId, investmentId, amount,companyName)).mapTo[String].map { productResponse =>
                       println(s"✅ Produit ajouté : $productResponse")
                       Json.obj("success" -> true, "message" -> response, "product" -> productResponse).toString()
                     }
@@ -275,31 +275,28 @@
             entity(as[String]) { body =>
               val json = Json.parse(body)
               val userId = (json \ "userId").as[Int]
-              val btcPriceFromFront = (json \ "btcPrice").asOpt[BigDecimal].getOrElse(BigDecimal(1))  // Valeur par défaut évitant division par 0
-              val ethPriceFromFront = (json \ "ethPrice").asOpt[BigDecimal].getOrElse(BigDecimal(1))
-              val dogePriceFromFront = (json \ "dogePrice").asOpt[BigDecimal].getOrElse(BigDecimal(1))
+              val btcPrice = (json \ "btcPrice").asOpt[BigDecimal].getOrElse(BigDecimal(1))
+              val ethPrice = (json \ "ethPrice").asOpt[BigDecimal].getOrElse(BigDecimal(1))
+              val dogePrice = (json \ "dogePrice").asOpt[BigDecimal].getOrElse(BigDecimal(1))
 
-              println(s"📥 Reçu calcul somme par action sécurisé pour userId: $userId")
+              val futureProducts = (productsActor ? ProductsActor.GetProductsByOwner(userId)).mapTo[Seq[Product]]
 
-              val futureInvestments = (utilisateurActor2 ? InvestmentActor.GetInvestments(userId)).mapTo[Seq[Investment]]
+              onComplete(futureProducts) {
+                case Success(products) =>
 
-              onComplete(futureInvestments) {
-                case Success(investments) =>
-
-                  def computeRatioSum(company: String, currentPrice: BigDecimal): BigDecimal = {
-                    if (currentPrice == 0) BigDecimal(0) // Évite division par 0
+                  def computeRatio(company: String, currentPrice: BigDecimal): BigDecimal = {
+                    if (currentPrice == 0) BigDecimal(0)
                     else {
-                      investments.filter(_.companyName == company)
-                        .map(inv => (inv.amountInvested + currentPrice) / currentPrice)
-                        .sum
+                      val companyProducts = products.filter(_.entreprise == company)
+                      companyProducts.map(p => (p.originalPrice + currentPrice) / currentPrice).sum
                     }
                   }
 
-                  val btcTotal = computeRatioSum("BTC", btcPriceFromFront)
-                  val ethTotal = computeRatioSum("ETH", ethPriceFromFront)
-                  val dogeTotal = computeRatioSum("DOGE", dogePriceFromFront)
+                  val btcTotal = computeRatio("BTC", btcPrice)
+                  val ethTotal = computeRatio("ETH", ethPrice)
+                  val dogeTotal = computeRatio("DOGE", dogePrice)
 
-                  println(s"✅ Résultat - BTC: $btcTotal, ETH: $ethTotal, DOGE: $dogeTotal")
+                  println(s"✅ Calcul terminé - BTC: $btcTotal, ETH: $ethTotal, DOGE: $dogeTotal")
 
                   complete(HttpEntity(ContentTypes.`application/json`, Json.obj(
                     "success" -> true,
@@ -310,7 +307,7 @@
                   ).toString()))
 
                 case Failure(exception) =>
-                  println(s"❌ Erreur lors de la récupération des investissements : ${exception.getMessage}")
+                  println(s"❌ Erreur lors de la récupération des produits : ${exception.getMessage}")
                   complete(HttpEntity(ContentTypes.`application/json`, Json.obj(
                     "success" -> false,
                     "message" -> "Erreur lors du calcul des ratios"
@@ -319,6 +316,9 @@
             }
           }
         }
+
+
+
 
 
 

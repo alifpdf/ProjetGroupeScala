@@ -4,7 +4,7 @@ import scala.concurrent.Future
 import scala.util.{Failure, Success}
 
 object ProductsActor {
-  case class AddProduct(ownerId: Int, investmentId: Int, originalPrice: BigDecimal)
+  case class AddProduct(ownerId: Int, investmentId: Int, originalPrice: BigDecimal,entreprise:String)
   case class GetProduct(productId: Int)
   case class GetAllProducts()
   case class GetProductsByOwner(ownerId: Int)
@@ -23,10 +23,10 @@ class ProductsActor(dbService: DBProducts) extends Actor {
   import context.dispatcher
 
   def receive: Receive = {
-    case AddProduct(ownerId, investmentId, originalPrice) =>
+    case AddProduct(ownerId, investmentId, originalPrice,entreprise) =>
       val originalSender = sender()
       println(s"📢 [ProductsActor] Ajout produit: Owner=$ownerId, Investment=$investmentId, Price=$originalPrice €")
-      dbService.addProduct(ownerId, investmentId, originalPrice).map { productId =>
+      dbService.addProduct(ownerId, investmentId, originalPrice,entreprise).map { productId =>
         s"✅ Produit ajouté avec ID: $productId"
       }.recover {
         case e => s"❌ Erreur ajout produit: ${e.getMessage}"
