@@ -1,5 +1,5 @@
 import AkkaStream.websocketFlow
-import Main.{notificationActor, timeout, utilisateurActor, utilisateurActor2}
+import Main.{notificationActor, productsActor, timeout, utilisateurActor, utilisateurActor2}
 import MarketstackDataFetcher.getLastMarketPrices
 import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
@@ -7,7 +7,6 @@ import akka.http.scaladsl.model.{ContentTypes, HttpEntity, StatusCodes}
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Route
 import akka.pattern.ask
-
 import ch.megard.akka.http.cors.scaladsl.CorsDirectives.cors
 import play.api.libs.json._
 
@@ -142,20 +141,39 @@ class WebSocketServer(implicit system: ActorSystem, ec: ExecutionContext) {
 
             notificationActor ! SocketActor.SendNotification(userId, s"📢 Investissement : Utilisateur $userId achète $numShares actions de $companyName pour $amount €")
 
-            val futureInvestment = (utilisateurActor2 ? InvestmentActor.AddInvestment(userId, companyName, amount * numShares,amount)).mapTo[String]
+            val futureInvestment = (utilisateurActor2 ? InvestmentActor.AddInvestment(userId, companyName, amount * numShares, amount)).mapTo[String]
 
-            onComplete(futureInvestment) {
-              case Success(response) =>
+            onComplete(futureInvestment.flatMap { response =>
+              println(s"✅ Réponse investissement : $response")
+
+              // 🔎 Extraction de l'ID de l'investissement depuis la réponse
+              val investmentIdOpt = "ID: (\\d+)".r.findFirstMatchIn(response).map(_.group(1).toInt)
+
+              investmentIdOpt match {
+                case Some(investmentId) =>
+                  // ✅ Ajouter le produit
+                  (productsActor ? ProductsActor.AddProduct(userId, investmentId, amount)).mapTo[String].map { productResponse =>
+                    println(s"✅ Produit ajouté : $productResponse")
+                    Json.obj("success" -> true, "message" -> response, "product" -> productResponse).toString()
+                  }
+
+                case None =>
+                  println("❌ Impossible de récupérer l'ID de l'investissement depuis la réponse")
+                  Future.successful(Json.obj("success" -> false, "message" -> "Erreur : ID de l'investissement introuvable").toString())
+              }
+            }) {
+              case Success(result) =>
                 updateFrontend(userId) // 🔥 Met à jour le solde et les investissements
-                complete(Json.obj("success" -> true, "message" -> response).toString())
+                complete(HttpEntity(ContentTypes.`application/json`, result))
 
               case Failure(exception) =>
-                println(s"❌ Erreur lors de l'investissement : ${exception.getMessage}")
-                complete(Json.obj("success" -> false, "message" -> "Erreur lors de l'investissement").toString())
+                println(s"❌ Erreur globale lors de l'investissement : ${exception.getMessage}")
+                complete(HttpEntity(ContentTypes.`application/json`, Json.obj("success" -> false, "message" -> "Erreur lors de l'investissement").toString()))
             }
           }
         }
-      },
+      }
+      ,
       path("api" / "get-balance") {
         post {
           entity(as[String]) { body =>

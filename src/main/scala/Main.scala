@@ -48,12 +48,14 @@ object Main extends App {
   val dbService = new DBUtilisateur(db) // ⚠️ Ajoute cette ligne
   val dbService1=new DBInvestment(db)
   val dbService2=new DBNotification(db)
+  val dbService3=new DBProducts(db)
 
 
   //A tester
   val utilisateurActor = system.actorOf(UtilisateurActor.props(dbService), "UtilisateurActor")
   val utilisateurActor2=system.actorOf(InvestmentActor.props(dbService1,utilisateurActor), "InvestementActor")
   val notificationActor = system.actorOf(SocketActor.props(dbService2), "SocketActor")
+  val productsActor = system.actorOf(ProductsActor.props(dbService3), "ProductsActor")
 
 
 
@@ -79,7 +81,6 @@ object Main extends App {
       }
 
   }
-
 
 
 
@@ -194,7 +195,7 @@ object Main extends App {
     }*/
 
   val server = new WebSocketServer()(system, ec)
-    server.start()
+   server.start()
 
   // ✅ Planification de l'envoi automatique après 15s
 
@@ -204,7 +205,7 @@ object Main extends App {
 
   // ✅ Planification du lancement du frontend après 20s
 
-      startFrontend()
+  startFrontend()
 
 
 

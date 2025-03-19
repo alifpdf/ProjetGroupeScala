@@ -1,4 +1,5 @@
 -- Supprime les tables si elles existent déjà (avec CASCADE)
+DROP TABLE IF EXISTS products CASCADE;
 DROP TABLE IF EXISTS investments CASCADE;
 DROP TABLE IF EXISTS users CASCADE;
 DROP TABLE IF EXISTS notifications CASCADE;
@@ -30,7 +31,13 @@ CREATE TABLE notifications (
                                timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
-
+CREATE TABLE products (
+                          id SERIAL PRIMARY KEY,
+                          owner_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                          investment_id INT NOT NULL REFERENCES investments(id) ON DELETE CASCADE,
+                          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                          original_price NUMERIC(10,2) NOT NULL
+);
 
 -- Insertion d'un utilisateur avec un solde initial
 INSERT INTO users (name, email, password, balance)

@@ -28,18 +28,18 @@ class InvestmentActor(dbService: DBInvestment,actor: ActorRef) extends Actor {
 
 
 
-    case AddInvestment(userId, companyName, amount,originalPrice) =>
+    case AddInvestment(userId, companyName, amount, originalPrice) =>
       val senderRef = sender()
 
       val result = for {
-        // 🔹 Étape 1 : Vérifier le solde de l'utilisateur
+        // 🔹 Vérifier le solde de l'utilisateur
         balance <- (utilisateurActor ? UtilisateurActor.GetBalance1(userId)).mapTo[BigDecimal]
         newBalance = balance - amount
 
-        // 🔹 Étape 2 : Vérifier si l'utilisateur a déjà investi dans cette entreprise
+        // 🔹 Vérifier si l'utilisateur a déjà investi
         existingInvestmentOpt <- dbService.getInvestmentByUserAndCompany(userId, companyName)
 
-        // 🔹 Étape 3 : Vérifier si l'utilisateur a assez d'argent pour investir
+        // 🔹 Vérifier le solde
         _ <- if (newBalance < 0) {
           println(s"❌ [InvestmentActor] Solde insuffisant pour investir $amount €")
           Future.successful(senderRef ! "Échec : Solde insuffisant")
@@ -47,24 +47,27 @@ class InvestmentActor(dbService: DBInvestment,actor: ActorRef) extends Actor {
           (utilisateurActor ? UtilisateurActor.updateBalance(userId, newBalance)).map(_ => ())
         }
 
-        // 🔹 Étape 4 : Mise à jour ou ajout de l'investissement
-        _ <- existingInvestmentOpt match {
+        // 🔹 Mise à jour ou ajout de l'investissement
+        investmentId <- existingInvestmentOpt match {
           case Some(existingInvestment) =>
-            // ✅ Mise à jour du montant de l'investissement existant
             val updatedAmount = existingInvestment.amountInvested + amount
-            dbService.updateInvestment(userId, companyName, updatedAmount)
-              .map(_ => println(s"✅ [InvestmentActor] Investissement mis à jour : $companyName -> $updatedAmount €"))
+            dbService.updateInvestment(userId, companyName, updatedAmount).map { _ =>
+              println(s"✅ [InvestmentActor] Investissement mis à jour : $companyName -> $updatedAmount €")
+              existingInvestment.id.get // On récupère l'ID existant
+            }
 
           case None =>
-            // ✅ Ajout d'un nouvel investissement
-            dbService.addInvestment(userId, companyName, amount/10,originalPrice)
-              .map(_ => println(s"✅ [InvestmentActor] Nouvel investissement ajouté pour $companyName"))
+            dbService.addInvestment(userId, companyName, amount / 10, originalPrice).map { newId =>
+              println(s"✅ [InvestmentActor] Nouvel investissement ajouté pour $companyName avec ID $newId")
+              newId // Retourne l'ID du nouvel investissement
+            }
         }
       } yield {
-        senderRef ! "✅ Succès : Investissement ajouté ou mis à jour"
+        senderRef ! s"✅ Succès : Investissement ID: $investmentId"
       }
 
       result
+
 
 
 
@@ -102,7 +105,6 @@ class InvestmentActor(dbService: DBInvestment,actor: ActorRef) extends Actor {
 
       dbService.updateInvestment(investmentId, companyName, newAmount)
         .map(_ => "✅ Mise à jour réussie")
-        .recover { case e => s"❌ Échec de la mise à jour: ${e.getMessage}" }
         .pipeTo(senderRef) // ✅ Envoie la réponse à `senderRef` automatiquement
 
 
