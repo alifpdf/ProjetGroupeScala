@@ -1,4 +1,4 @@
-### Rapport d’Architecture du Projet - Gestion de Portefeuilles d’Investissement en Cryptomonnaies
+### Rapport d’Architecture du Projet Scala - Gestion de Portefeuilles d’Investissement en Cryptomonnaies
 
 ### Introduction
 Ce document présente l’architecture complète de la plateforme développée pour gérer des portefeuilles d’investissement en cryptomonnaies. Le projet vise à offrir une solution robuste, scalable et réactive permettant :
