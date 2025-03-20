@@ -63,8 +63,8 @@ object AkkaStream {
     } yield {
       synchronized {
         investments = investments.map {
-          case ("BTC-USD", price) => "BTC-USD" -> btcPrice/10000.0
-          case ("ETH-USD", price) => "ETH-USD" -> ethPrice/1000.0
+          case ("BTC-USD", price) => "BTC-USD" -> btcPrice//10000.0
+          case ("ETH-USD", price) => "ETH-USD" -> ethPrice//1000.0
           case ("DOGE-USD", price) => "DOGE-USD" -> dogePrice
           case (company, price) => company -> price // Garder l'ancien prix pour les autres entreprises si nécessaire
         }

@@ -1,19 +1,21 @@
 import React, { useState, useEffect } from "react";
+import "./InvestmentStrategies.css"; // Import CSS file
 
 function InvestmentStrategies() {
     const [investments, setInvestments] = useState([]);
+    const [history, setPurchaseHistory] = useState([]);
     const [user, setUser] = useState(() => JSON.parse(localStorage.getItem("user")));
-    const [nav, setNav] = useState(0); // Valeur nette du portefeuille (NAV)
+    const [nav, setNav] = useState(0);
     const [sharpeRatio, setSharpeRatio] = useState(0);
     const [volatility, setVolatility] = useState(0);
-    const [ws, setWs] = useState(null); // WebSocket connection
-    const [totalInvestments, setTotalInvestments] = useState(0); // Somme des investissements
-    const [balance, setBalance] = useState(0); // Balance de l'utilisateur
+    const [ws, setWs] = useState(null);
+    const [totalInvestments, setTotalInvestments] = useState(0);
+    const [balance, setBalance] = useState(0);
     const [btc, setBtc] = useState(0);
     const [eth, setEth] = useState(0);
     const [doge, setDoge] = useState(0);
+    const [activeTab, setActiveTab] = useState("portfolio");
 
-    // Connexion au WebSocket dès que l'utilisateur est connecté
     useEffect(() => {
         if (user) {
             const websocket = new WebSocket("ws://localhost:8080/ws");
@@ -30,21 +32,24 @@ function InvestmentStrategies() {
                 if (data.type === "update") {
                     console.log("📢 Mise à jour des investissements reçue:", data);
 
-                    // Vérifier que la balance reçue est valide avant de la mettre à jour
                     if (data.balance && !isNaN(data.balance)) {
-                        setBalance(data.balance); // Mise à jour de la balance
+                        setBalance(data.balance);
                     } else {
                         console.error("❌ Balance non valide:", data.balance);
                     }
 
                     if (data.investments) {
-                        setInvestments(data.investments); // Mise à jour des investissements
-                        calculateFinancialIndicators(data.investments); // Calcul des indicateurs financiers
-                        calculateTotalInvestments(data.investments); // Calcul de la somme des investissements
+                        setInvestments(data.investments);
+                        calculateFinancialIndicators(data.investments);
+                        calculateTotalInvestments(data.investments);
                     } else {
                         console.error("❌ Investissements non trouvés:", data.investments);
                     }
 
+                    // Mettre à jour l'historique des achats si présent
+                    if (data.history) {
+                        setPurchaseHistory(data.history);
+                    }
                 }
                 if (data.type === "random") {
                     const newBTC = parseFloat(data.data);
@@ -64,7 +69,6 @@ function InvestmentStrategies() {
                 console.log("❌ Connexion WebSocket fermée");
             };
 
-            // Fermer la connexion WebSocket lors de la déconnexion de l'utilisateur
             return () => {
                 if (websocket) {
                     websocket.close();
@@ -73,14 +77,13 @@ function InvestmentStrategies() {
         }
     }, [user]);
 
-    // Récupérer la balance via l'API REST
     useEffect(() => {
         if (user) {
             fetchBalance();
+            fetchPurchaseHistory();
         }
     }, [user]);
 
-    // Fonction pour récupérer la balance de l'utilisateur
     const fetchBalance = async () => {
         try {
             const response = await fetch("http://localhost:8080/api/get-balance", {
@@ -93,7 +96,7 @@ function InvestmentStrategies() {
 
             const data = await response.json();
             if (data.success) {
-                setBalance(data.balance); // Mise à jour de la balance
+                setBalance(data.balance);
                 console.log(`📢 Balance mise à jour : ${data.balance}`);
             } else {
                 console.error("❌ Erreur lors de la récupération de la balance :", data.message);
@@ -103,33 +106,65 @@ function InvestmentStrategies() {
         }
     };
 
-    // Fonction pour calculer la somme des investissements
-    const calculateTotalInvestments = (investments) => {
-        const total = investments.reduce((sum, investment) => sum + investment.amountInvested, 0);
-        setTotalInvestments(total); // Mise à jour du total des investissements
+    const fetchPurchaseHistory = async () => {
+        try {
+            const response = await fetch("http://localhost:8080/api/get-products-history", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({ userId: user.id })
+            });
+
+            const data = await response.json();
+            console.log("📢 Réponse de l'API :", data); // Vérifier ce qui est reçu
+
+            if (data.success) {
+                if (data.history) {
+                    setPurchaseHistory(data.history);
+                } else {
+                    console.error("❌ Aucune clé 'history' ou 'purchaseHistory' trouvée !");
+                }
+            } else {
+                console.error("❌ Erreur lors de la récupération de l'historique :", data.message);
+            }
+        } catch (error) {
+            console.error("❌ Erreur lors de la récupération de l'historique :", error);
+        }
     };
 
-    // Calcul des indicateurs financiers
+    const calculateAverageReturn = (companyName, history) => {
+        const relatedProducts = history.filter(product => product.companyName === companyName);
+        const totalRendement = relatedProducts.reduce((sum, product) => sum + product.rendement, 0);
+
+        console.log(`🔹 Rendement total pour ${companyName}: ${totalRendement}`);
+
+        return relatedProducts.length > 0 ? totalRendement / relatedProducts.length : 0;
+    };
+
+    const calculateTotalInvestments = (investments) => {
+        const total = investments.reduce((sum, investment) => sum + investment.amountInvested, 0);
+        setTotalInvestments(total);
+    };
+
     const calculateFinancialIndicators = (investments) => {
         if (investments.length === 0) return;
 
         const rendements = investments.map(inv => {
-            const price = inv.amountInvested; // Pour l'exemple, on utilise l'amountInvested
-            console.log(inv.amountInvested);
-            const randomRendement = Math.random() * 0.1 - 0.05; // Le rendement aléatoire entre -5% et +5%
-            return price * randomRendement; // Calcul du rendement
+            const price = inv.amountInvested;
+            const randomRendement = Math.random() * 0.1 - 0.05;
+            return price * randomRendement;
         });
 
         const meanRendement = rendements.reduce((a, b) => a + b, 0) / rendements.length;
-        const riskFreeRate = 0.02; // Taux sans risque à 2%
+        const riskFreeRate = 0.02;
         const variance = rendements.reduce((sum, r) => sum + Math.pow(r - meanRendement, 2), 0) / rendements.length;
-        const stdDeviation = Math.sqrt(variance); // Calcul de la déviation standard (volatilité)
+        const stdDeviation = Math.sqrt(variance);
 
         setVolatility(stdDeviation);
         setSharpeRatio(stdDeviation === 0 ? 0 : (meanRendement - riskFreeRate) / stdDeviation);
     };
 
-    // Définir une stratégie en fonction des indicateurs financiers
     const getInvestmentStrategy = () => {
         if (sharpeRatio > 1 && volatility < 0.2) {
             return "🔵 Stratégie Défensive : Investissez dans des actifs sûrs (obligations, blue chips).";
@@ -152,19 +187,21 @@ function InvestmentStrategies() {
         }
     };
 
-    // Calculer la NAV : balance + total des investissements
     const calculateNav = () => {
         return balance + totalInvestments;
     };
 
-    // Vérifier si les données sont valides avant d'appeler `toFixed`
     const safeToFixed = (value, decimals = 2) => {
         return value !== undefined && value !== null ? value.toFixed(decimals) : "0.00";
     };
 
-    // Fonction pour notifier la stratégie au backend
+    // Calcul du rendement correct
+    const calculateReturn = (currentPrice, originalPrice) => {
+        if (!currentPrice || !originalPrice) return 0;
+        return ((currentPrice - originalPrice) / originalPrice) * 100;
+    };
+
     const notifyStrategy = async (strategy) => {
-        // Utilisateur connecté
         const strategyMessage = {
             strategy: strategy,
             userId: user.id
@@ -186,37 +223,145 @@ function InvestmentStrategies() {
         }
     };
 
+    // Fonction pour formatter la date
+    const formatDate = (timestamp) => {
+        const date = new Date(timestamp);
+        return date.toLocaleDateString('fr-FR', {
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+    };
+
     return (
-        <div style={{ textAlign: "center", marginTop: "50px" }}>
-            <h2>📊 Stratégies d'Investissement</h2>
+        <div className="investment-container">
+            <h2 className="investment-header">📊 Stratégies d'Investissement</h2>
             {user ? (
-                <>
-                    <h3>💰 Valeur Nette du Portefeuille (NAV) : {safeToFixed(calculateNav())}</h3> {/* Calculer la NAV */}
-                    <h3>📈 Ratio de Sharpe : {safeToFixed(sharpeRatio)}</h3>
-                    <h3>📉 Volatilité : {safeToFixed(volatility * 100)}%</h3>
+                <div className="investment-dashboard">
+                    <div className="dashboard-tabs">
+                        <button
+                            className={`tab-button ${activeTab === "portfolio" ? "active" : ""}`}
+                            onClick={() => setActiveTab("portfolio")}
+                        >
+                            Portfolio
+                        </button>
+                        <button
+                            className={`tab-button ${activeTab === "history" ? "active" : ""}`}
+                            onClick={() => setActiveTab("history")}
+                        >
+                            Historique des Achats
+                        </button>
+                    </div>
 
-                    <h3>🧠 Stratégie Recommandée :</h3>
-                    <p style={{ fontSize: "18px", fontWeight: "bold", color: "#007bff" }} >
-                        {getInvestmentStrategy()}
-                    </p>
+                    {activeTab === "portfolio" ? (
+                        <>
+                            <div className="metrics-container">
+                                <div className="metric-card">
+                                    <h3>💰 Valeur Nette (NAV)</h3>
+                                    <p className="metric-value">{safeToFixed(calculateNav())}€</p>
+                                </div>
+                                <div className="metric-card">
+                                    <h3>📈 Ratio de Sharpe</h3>
+                                    <p className="metric-value">{safeToFixed(sharpeRatio)}</p>
+                                </div>
+                                <div className="metric-card">
+                                    <h3>📉 Volatilité</h3>
+                                    <p className="metric-value">{safeToFixed(volatility * 100)}%</p>
+                                </div>
+                                <div className="metric-card">
+                                    <h3>💸 Total Investi</h3>
+                                    <p className="metric-value">{safeToFixed(totalInvestments)}€</p>
+                                </div>
+                            </div>
 
-                    <h3>📋 Total des Investissements : {safeToFixed(totalInvestments)}</h3> {/* Affichage de la somme totale des investissements */}
+                            <div className="strategy-container">
+                                <h3>🧠 Stratégie Recommandée :</h3>
+                                <p className="strategy-text">
+                                    {getInvestmentStrategy()}
+                                </p>
+                            </div>
 
-                    <h2>📋 Investissements Actuels</h2>
-                    <ul>
-                        {investments.map((inv, index) => {
-                            const currentPrice = getCurrentPrice(inv.companyName);
-                            const percentageChange = currentPrice ? ((currentPrice - inv.originalPrice) / inv.originalPrice) * 100 : 0;
-                            return (
-                                <li key={inv.id || index}>
-                                    {inv.companyName} - 💰 {inv.amountInvested}€ - {percentageChange.toFixed(2)}%
-                                </li>
-                            );
-                        })}
-                    </ul>
-                </>
+                            <div className="investments-list">
+                                <h3>📋 Investissements Actuels</h3>
+                                <table className="investment-table">
+                                    <thead>
+                                    <tr>
+                                        <th>Actif</th>
+                                        <th>Montant Investi</th>
+                                        <th>Prix Actuel</th>
+                                        <th>Rendement</th>
+                                    </tr>
+                                    </thead>
+                                    <tbody>
+                                    {investments.map((inv, index) => {
+                                        // Calcul du prix actuel pour l'investissement
+                                        const currentPrice = getCurrentPrice(inv.companyName);
+
+                                        // Calcul du rendement moyen de l'investissement (comme dans le code d'origine)
+                                        const relatedProducts = history.filter(product => product.companyName === inv.companyName);
+                                        const totalRendement = relatedProducts.reduce((sum, product) => sum + product.rendement, 0);
+                                        console.log("rendement total: "+totalRendement)
+                                        const averageRendement = relatedProducts.length > 0 ? totalRendement / relatedProducts.length : 0;
+
+                                        // Vérifier le type de cryptomonnaie (BTC, ETH, DOGE) et affecter le ratio approprié
+                                        let companyRatio = 0;
+                                        if (inv.companyName === "BTC") {
+                                            companyRatio = inv.BTC_ratio_sum; // Utilise la valeur de BTC_ratio_sum pour BTC
+                                        } else if (inv.companyName === "ETH") {
+                                            companyRatio = inv.ETH_ratio_sum; // Utilise la valeur de ETH_ratio_sum pour ETH
+                                        } else if (inv.companyName === "DOGE") {
+                                            companyRatio = inv.DOGE_ratio_sum; // Utilise la valeur de DOGE_ratio_sum pour DOGE
+                                        } else {
+                                            companyRatio = averageRendement; // Si aucune des cryptos spécifiées, utilise le calcul moyen
+                                        }
+
+                                        return (
+                                            <tr key={inv.id || index}>
+                                                <td>{inv.companyName}</td>
+                                                <td>{safeToFixed(inv.amountInvested)}€</td>
+                                                <td>{safeToFixed(currentPrice)}€</td>
+                                                <td className={companyRatio >= 0 ? "positive-return" : "negative-return"}>
+                                                    {safeToFixed(companyRatio, 6)}%
+                                                </td>
+                                            </tr>
+                                        );
+                                    })}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </>
+                    ) : (
+                        <div className="history-container">
+                            <h3>🕒 Historique des Achats</h3>
+                            <table className="history-table">
+                                <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Actif</th>
+                                    <th>Quantité</th>
+                                    <th>Prix</th>
+                                    <th>Montant Total</th>
+                                </tr>
+                                </thead>
+                                <tbody>
+                                {history.map((purchase, index) => (
+                                    <tr key={purchase.id || index}>
+                                        <td>{formatDate(purchase.created_at)}</td>
+                                        <td>{purchase.companyName}</td>
+                                        <td>{purchase.quantity}</td>
+                                        <td>{purchase.price/purchase.quantity}€</td>
+                                        <td>{safeToFixed(purchase.price)}€</td>
+                                    </tr>
+                                ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    )}
+                </div>
             ) : (
-                <p>🔑 Connectez-vous pour voir vos investissements.</p>
+                <p className="login-message">🔑 Connectez-vous pour voir vos investissements.</p>
             )}
         </div>
     );

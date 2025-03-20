@@ -60,7 +60,6 @@ object Main extends App {
 
 
   // First Investment
-  // First Investment
   val firstInvestmentFuture: Future[String] = (utilisateurActor2 ? InvestmentActor.AddInvestment(1, "BTC", 10,1)).mapTo[String]
 
   // Handle the first investment

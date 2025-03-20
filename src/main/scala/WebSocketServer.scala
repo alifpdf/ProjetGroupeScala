@@ -10,29 +10,32 @@ import akka.pattern.ask
 import ch.megard.akka.http.cors.scaladsl.CorsDirectives.cors
 import play.api.libs.json._
 
-import java.time.LocalDateTime
-import scala.concurrent.{Await, ExecutionContext, Future}
+import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success}
 
 // 🔥 Augmente le délai d'attente pour éviter les erreurs
 
 case class InformerVolatile(userId: Int, strategy: String) // Changer 'message' par 'strategy'
+
 object InformerVolatile {
   implicit val format: OFormat[InformerVolatile] = Json.format[InformerVolatile]
 }
 
 
 case class RecupererSommeRequest(companyName: String, userId: Int, sommeInvesti: BigDecimal)
+
 object RecupererSommeRequest {
   implicit val format: Format[RecupererSommeRequest] = Json.format[RecupererSommeRequest]
 }
 
 case class Connexion(email: String, password: String)
+
 object Connexion {
   implicit val format: Format[Connexion] = Json.format[Connexion]
 }
 
 case class AddUserRequest(name: String, email: String, password: String)
+
 object AddUserRequest {
   implicit val format: Format[AddUserRequest] = Json.format[AddUserRequest]
 }
@@ -59,17 +62,12 @@ class WebSocketServer(implicit system: ActorSystem, ec: ExecutionContext) {
 
                 notificationActor ! SocketActor.SendNotification(request.userId,s"✅ Récupération de ${request.sommeInvesti}€ de ${request.companyName} (user: ${request.userId})")
 
-
                 val futureRecuperation = (utilisateurActor2 ? InvestmentActor.RecupererlaSomme(request.companyName, request.userId, request.sommeInvesti)).mapTo[String]
 
                 onComplete(futureRecuperation) {
                   case Success(response) =>
                     updateFrontend(request.userId) // 🔥 Met à jour le solde et les investissements
                     complete(Json.obj("success" -> true, "message" -> response).toString())
-
-                  case Failure(exception) =>
-                    println(s"❌ Erreur lors de la récupération : ${exception.getMessage}")
-                    complete(Json.obj("success" -> false, "message" -> "Erreur lors de la récupération").toString())
                 }
             }
           }
@@ -144,65 +142,38 @@ class WebSocketServer(implicit system: ActorSystem, ec: ExecutionContext) {
 
             val futureInvestment = (utilisateurActor2 ? InvestmentActor.AddInvestment(userId, companyName, amount * numShares, amount)).mapTo[String]
 
-            onComplete(futureInvestment) {
-              case Success(response) if response.startsWith("✅") =>
-                // Extraire l'ID de l'investissement créé (supposons que la réponse contient un ID)
-                val investmentIdPattern = "ID: (\\d+)".r
-                val investmentId = investmentIdPattern.findFirstMatchIn(response)
-                  .map(_.group(1).toInt)
-                  .getOrElse {
-                    // Si on ne peut pas extraire l'ID, on utilise une requête pour le récupérer
-                    val futureInvestmentId = (utilisateurActor2 ? InvestmentActor.GetInvestments(userId)).mapTo[Int]
-                    Await.result(futureInvestmentId, timeout.duration)
+            onComplete(futureInvestment.flatMap { response =>
+              println(s"✅ Réponse investissement : $response")
+
+              // 🔎 Extraction de l'ID de l'investissement depuis la réponse
+              val investmentIdOpt = "ID: (\\d+)".r.findFirstMatchIn(response).map(_.group(1).toInt)
+
+              investmentIdOpt match {
+                case Some(investmentId) =>
+                  // ✅ Ajouter le produit
+                  (productsActor ? ProductsActor.AddProduct(userId, investmentId, amount, companyName, numShares)).mapTo[String].map { productResponse =>
+                    println(s"✅ Produit ajouté : $productResponse")
+                    Json.obj("success" -> true, "message" -> response, "product" -> productResponse).toString()
                   }
 
-                // Créer un nouveau produit
-                val product = Product(
-                  id = None,
-                  ownerId = userId,
-                  investmentId = investmentId,
-                  createdAt = LocalDateTime.now(),
-                  originalPrice = amount
-                )
-
-                // Ajouter le produit à la base de données
-                val futureProduct = (productsActor ? ProductsActor.AddProduct(userId, investmentId, amount)).mapTo[String]
-
-                // Gérer la réponse de la création du produit
-                onComplete(futureProduct) {
-                  case Success(productResponse) =>
-                    println(s"✅ Produit créé avec succès: $productResponse")
-                    updateFrontend(userId) // 🔥 Met à jour le solde et les investissements
-                    complete(Json.obj(
-                      "success" -> true,
-                      "message" -> response,
-                      "product" -> "Produit créé avec succès"
-                    ).toString())
-
-                  case Failure(productException) =>
-                    println(s"⚠️ Investissement réussi mais erreur lors de la création du produit : ${productException.getMessage}")
-                    updateFrontend(userId)
-                    complete(Json.obj(
-                      "success" -> true,
-                      "message" -> response,
-                      "product" -> s"Erreur lors de la création du produit: ${productException.getMessage}"
-                    ).toString())
-                }
-
-              case Success(response) =>
-                // Si l'investissement a échoué
-                println(s"❌ Échec de l'investissement: $response")
-                complete(Json.obj("success" -> false, "message" -> response).toString())
+                case None =>
+                  println("❌ Impossible de récupérer l'ID de l'investissement depuis la réponse")
+                  Future.successful(Json.obj("success" -> false, "message" -> "Erreur : ID de l'investissement introuvable").toString())
+              }
+            }) {
+              case Success(result) =>
+                updateFrontend(userId) // 🔥 Met à jour le solde et les investissements
+                complete(HttpEntity(ContentTypes.`application/json`, result))
 
               case Failure(exception) =>
-                println(s"❌ Erreur lors de l'investissement : ${exception.getMessage}")
-                complete(Json.obj("success" -> false, "message" -> "Erreur lors de l'investissement").toString())
+                println(s"❌ Erreur globale lors de l'investissement : ${exception.getMessage}")
+                complete(HttpEntity(ContentTypes.`application/json`, Json.obj("success" -> false, "message" -> "Erreur lors de l'investissement").toString()))
             }
           }
         }
       },
 
-
+      // ✅ Récupération du solde
       path("api" / "get-balance") {
         post {
           entity(as[String]) { body =>
@@ -219,6 +190,8 @@ class WebSocketServer(implicit system: ActorSystem, ec: ExecutionContext) {
           }
         }
       },
+
+      // ✅ Notification de stratégie
       path("api" / "notify-strategy") {
         post {
           entity(as[String]) { body =>
@@ -255,19 +228,28 @@ class WebSocketServer(implicit system: ActorSystem, ec: ExecutionContext) {
         }
       },
 
+      // ✅ Récupération des investissements
       path("api" / "get-investments") {
         post {
           entity(as[String]) { body =>
-            val userId = (Json.parse(body) \ "userId").as[Int] // Récupérer l'ID utilisateur depuis le corps de la requête
+            val userId = (Json.parse(body) \ "userId").as[Int] // Récupérer l'ID utilisateur depuis la requête
 
             // Récupérer les investissements de l'utilisateur via l'acteur utilisateurActor2
             val futureInvestments = (utilisateurActor2 ? InvestmentActor.GetInvestments(userId)).mapTo[Seq[Investment]]
 
             onComplete(futureInvestments) {
               case Success(investments) =>
+                val investmentsWithCompanyNames = investments.map { investment =>
+                  Json.obj(
+                    "investmentId" -> investment.id,
+                    "companyName" -> investment.companyName, // Ajout du nom de l'entreprise
+                    "amount" -> investment.amountInvested,
+                  )
+                }
+
                 complete(HttpEntity(ContentTypes.`application/json`, Json.obj(
                   "success" -> true,
-                  "investments" -> Json.toJson(investments)
+                  "investments" -> investmentsWithCompanyNames
                 ).toString()))
 
               case Failure(exception) =>
@@ -279,7 +261,10 @@ class WebSocketServer(implicit system: ActorSystem, ec: ExecutionContext) {
             }
           }
         }
-      },
+      }
+      ,
+
+      // ✅ Récupération des derniers prix
       path("api" / "get-last-prices") {
         post {
           val futureBtcPrices = getLastMarketPrices("BTC")
@@ -298,7 +283,122 @@ class WebSocketServer(implicit system: ActorSystem, ec: ExecutionContext) {
               ).toString()))
           }
         }
+      },
+
+      // ✅ Calcul personnalisé avec récupération des prix actuels
+      path("api" / "calculate-sum") {
+        post {
+          entity(as[String]) { body =>
+            val json = Json.parse(body)
+            val userId = (json \ "userId").as[Int]
+            val btcPrice = (json \ "btcPrice").asOpt[BigDecimal].getOrElse(BigDecimal(1))
+            val ethPrice = (json \ "ethPrice").asOpt[BigDecimal].getOrElse(BigDecimal(1))
+            val dogePrice = (json \ "dogePrice").asOpt[BigDecimal].getOrElse(BigDecimal(1))
+
+            val futureProducts = (productsActor ? ProductsActor.GetProductsByOwner(userId)).mapTo[Seq[Product]]
+
+            onComplete(futureProducts) {
+              case Success(products) =>
+
+                def computeRatio(company: String, currentPrice: BigDecimal): BigDecimal = {
+                  println("\n\n\n"+company+"\n"+currentPrice+"\n\n\n")
+                  if (currentPrice == 0) BigDecimal(0)
+                  else {
+                    val companyProducts = products.filter(_.entreprise == company)
+                    companyProducts.map(p => ((currentPrice-p.originalPrice) /p.originalPrice)*100).sum
+                  }
+                }
+
+                val btcTotal = computeRatio("BTC", btcPrice)
+                val ethTotal = computeRatio("ETH", ethPrice)
+                val dogeTotal = computeRatio("DOGE", dogePrice)
+
+                println(s"✅ Calcul terminé - BTC: $btcTotal, ETH: $ethTotal, DOGE: $dogeTotal")
+
+                complete(HttpEntity(ContentTypes.`application/json`, Json.obj(
+                  "success" -> true,
+                  "userId" -> userId,
+                  "BTC_ratio_sum" -> btcTotal,
+                  "ETH_ratio_sum" -> ethTotal,
+                  "DOGE_ratio_sum" -> dogeTotal
+                ).toString()))
+
+            }
+          }
+        }
+      },
+
+      path("api" / "get-products-history") {
+        post {
+          entity(as[String]) { body =>
+            val json = Json.parse(body)
+            val userId = (json \ "userId").as[Int]
+            val btcPrice = (json \ "btcPrice").asOpt[BigDecimal].getOrElse(BigDecimal(1))
+            val ethPrice = (json \ "ethPrice").asOpt[BigDecimal].getOrElse(BigDecimal(1))
+            val dogePrice = (json \ "dogePrice").asOpt[BigDecimal].getOrElse(BigDecimal(1))
+
+            val productsFuture = (productsActor ? ProductsActor.GetProductsByOwner(userId)).mapTo[Seq[Product]]
+
+            onComplete(productsFuture) {
+              case Success(products) =>
+                def computeReturn(company: String, currentPrice: BigDecimal): BigDecimal = {
+                  if (currentPrice == 0) BigDecimal(0)
+                  else {
+                    val companyProducts = products.filter(_.entreprise == company)
+                    companyProducts.map(p => ((currentPrice - p.originalPrice) / p.originalPrice) * 100).sum
+                  }
+                }
+
+                def computeAverageReturn(company: String): BigDecimal = {
+                  val companyProducts = products.filter(_.entreprise == company)
+                  if (companyProducts.nonEmpty) {
+                    val totalReturn = companyProducts.map(p => ((computeReturn(company, getCurrentPrice(company)) / 100) * p.numshare)).sum
+                    totalReturn / companyProducts.size
+                  } else BigDecimal(0)
+                }
+
+                def getCurrentPrice(company: String): BigDecimal = {
+                  company match {
+                    case "BTC" => btcPrice
+                    case "ETH" => ethPrice
+                    case "DOGE" => dogePrice
+                    case _ => BigDecimal(1)
+                  }
+                }
+
+                val historyJson = products.map { product =>
+                  val currentPrice = getCurrentPrice(product.entreprise)
+                  val rendement = computeReturn(product.entreprise, currentPrice)
+
+                  Json.obj(
+                    "id" -> product.investmentId,
+                    "companyName" -> product.entreprise,
+                    "quantity" -> product.numshare,
+                    "price" -> product.originalPrice,
+                    "created_at" -> product.createdAt.toString,
+                    "rendement" -> rendement,
+                    "averageReturn" -> computeAverageReturn(product.entreprise)
+                  )
+                }
+
+                complete(HttpEntity(ContentTypes.`application/json`, Json.obj(
+                  "success" -> true,
+                  "history" -> historyJson
+                ).toString()))
+
+              case Failure(exception) =>
+                println(s"❌ Erreur lors de la récupération des produits : ${exception.getMessage}")
+                complete(HttpEntity(ContentTypes.`application/json`, Json.obj(
+                  "success" -> false,
+                  "message" -> "Erreur lors de la récupération des produits"
+                ).toString()))
+            }
+          }
+        }
       }
+
+
+
 
 
     )
@@ -311,28 +411,29 @@ class WebSocketServer(implicit system: ActorSystem, ec: ExecutionContext) {
     // Effectuer les appels pour obtenir les investissements et la balance
     val futureInvestments = (utilisateurActor2 ? InvestmentActor.GetInvestments(userId)).mapTo[Seq[Investment]]
     val futureBalance = (utilisateurActor ? UtilisateurActor.GetBalance1(userId)).mapTo[BigDecimal]
+    val futureProducts = (productsActor ? ProductsActor.GetProductsByOwner(userId)).mapTo[Seq[Product]]
 
-    // Une fois les deux résultats obtenus, envoyer la mise à jour au frontend
+    // Une fois tous les résultats obtenus, envoyer la mise à jour au frontend
     for {
       investments <- futureInvestments
       balance <- futureBalance
+      products <- futureProducts
     } yield {
-      // Créer un message JSON avec les informations des investissements et de la balance
+      // Créer un message JSON avec les informations des investissements, de la balance et des produits
       val updateMessage = Json.obj(
         "type" -> "update",
         "userId" -> userId,
         "balance" -> balance,
-        "investments" -> Json.toJson(investments)
+        "investments" -> Json.toJson(investments),
+        "products" -> Json.toJson(products)
       ).toString()
-
 
       println(s"✅ Envoi de la mise à jour au frontend : $updateMessage")
     }
   }
 
-
   def start(): Unit = {
     Http().newServerAt("localhost", 8080).bind(route)
-    println("✅ Serveur WebSocket en écoute sur ws://localhost:8080/ws et API REST sur /api/recuperer-somme")
+    println("✅ Serveur WebSocket en écoute sur ws://localhost:8080/ws et API REST sur http://localhost:8080/api")
   }
 }

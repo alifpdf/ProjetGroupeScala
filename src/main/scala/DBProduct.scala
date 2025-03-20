@@ -9,7 +9,10 @@ case class Product(
                     ownerId: Int,
                     investmentId: Int,
                     createdAt: LocalDateTime = LocalDateTime.now(),
-                    originalPrice: BigDecimal
+
+                    originalPrice: BigDecimal,
+                    entreprise:String,
+                    numshare:Int
                   )
 
 object Product {
@@ -35,12 +38,15 @@ class ProductsTable(tag: Tag) extends Table[Product](tag, "products") {
   def investmentId = column[Int]("investment_id")
   def createdAt = column[LocalDateTime]("created_at")
   def originalPrice = column[BigDecimal]("original_price")
+  def entreprise = column[String]("entreprise")
+  def numshare = column[Int]("numshare")
+
 
   // Clés étrangères
   def ownerFk = foreignKey("owner_fk", ownerId, UsersTable.table)(_.id, onDelete = ForeignKeyAction.Cascade)
   def investmentFk = foreignKey("investment_fk", investmentId, InvestmentsTable.table)(_.id, onDelete = ForeignKeyAction.Cascade)
 
-  def * = (id.?, ownerId, investmentId, createdAt, originalPrice) <> (Product.tupled, Product.unapply)
+  def * = (id.?, ownerId, investmentId, createdAt, originalPrice,entreprise,numshare) <> (Product.tupled, Product.unapply)
 }
 
 object ProductsTable {
@@ -53,9 +59,9 @@ class DBProducts(db: Database)(implicit ec: ExecutionContext) {
   def createTable(): Future[Unit] = db.run(ProductsTable.table.schema.createIfNotExists)
 
   // Ajouter un produit
-  def addProduct(ownerId: Int, investmentId: Int, originalPrice: BigDecimal): Future[Int] = {
+  def addProduct(ownerId: Int, investmentId: Int, originalPrice: BigDecimal,entreprise:String,numshare:Int): Future[Int] = {
     println(s"📊 [DBProducts] Ajout d'un produit: Owner: $ownerId, Investment: $investmentId")
-    val newProduct = Product(None, ownerId, investmentId, LocalDateTime.now(), originalPrice)
+    val newProduct = Product(None, ownerId, investmentId, LocalDateTime.now(), originalPrice,entreprise,numshare:Int)
     db.run(ProductsTable.table += newProduct)
   }
 
@@ -85,6 +91,7 @@ class DBProducts(db: Database)(implicit ec: ExecutionContext) {
   def getProductsByOwner(ownerId: Int): Future[Seq[Product]] = {
     println(s"📊 [DBProducts] Récupération des produits du propriétaire ID: $ownerId")
     db.run(ProductsTable.table.filter(_.ownerId === ownerId).result)
+
   }
 
   // Récupérer les produits par propriétaire au format JSON

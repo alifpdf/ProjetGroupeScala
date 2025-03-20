@@ -35,14 +35,14 @@ object MarketstackDataFetcher {
         case Some(arr) if arr.value.nonEmpty =>
           val sortedPrices = arr.value.map { item =>
             val date = (item \ "date").as[String]
-            val close = (item \ "close").asOpt[Double].getOrElse(0.5) *(1.09/ 10) // Default to 0.5 if missing
+            val close = (item \ "close").asOpt[Double].getOrElse(1930.0) //*(1.09/ 10) // Default to 0.5 if missing
             (date, close)
           }.sortBy(_._1).map(_._2).toList
 
           sortedPrices.take(6)
         case _ =>
           println(s"No data found for symbol: $symbol, initializing with default values.")
-          List.fill(6)(0.5)
+          List.fill(6)(1930.0)
       }
     }
   }
