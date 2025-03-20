@@ -11,7 +11,7 @@
   import play.api.libs.json._
 
   import scala.concurrent.{ExecutionContext, Future}
-  import scala.util.{Success}
+  import scala.util.{Success,Failure}
 
 
   // Augmente le délai d'attente pour éviter les erreurs
@@ -305,7 +305,79 @@
                 }
             }
           }
+        },
+
+        path("api" / "get-products-history") {
+          post {
+            entity(as[String]) { body =>
+              val json = Json.parse(body)
+              val userId = (json \ "userId").as[Int]
+              val btcPrice = (json \ "btcPrice").asOpt[BigDecimal].getOrElse(BigDecimal(1))
+              val ethPrice = (json \ "ethPrice").asOpt[BigDecimal].getOrElse(BigDecimal(1))
+              val dogePrice = (json \ "dogePrice").asOpt[BigDecimal].getOrElse(BigDecimal(1))
+
+              val productsFuture = (productsActor ? ProductsActor.GetProductsByOwner(userId)).mapTo[Seq[Product]]
+
+              onComplete(productsFuture) {
+                case Success(products) =>
+                  def computeReturn(company: String, currentPrice: BigDecimal): BigDecimal = {
+                    if (currentPrice == 0) BigDecimal(0)
+                    else {
+                      val companyProducts = products.filter(_.entreprise == company)
+                      companyProducts.map(p => ((currentPrice - p.originalPrice) / p.originalPrice) * 100).sum
+                    }
+                  }
+
+                  def computeAverageReturn(company: String): BigDecimal = {
+                    val companyProducts = products.filter(_.entreprise == company)
+                    if (companyProducts.nonEmpty) {
+                      val totalReturn = companyProducts.map(p => ((computeReturn(company, getCurrentPrice(company)) / 100) * p.numshare)).sum
+                      totalReturn / companyProducts.size
+                    } else BigDecimal(0)
+                  }
+
+                  def getCurrentPrice(company: String): BigDecimal = {
+                    company match {
+                      case "BTC" => btcPrice
+                      case "ETH" => ethPrice
+                      case "DOGE" => dogePrice
+                      case _ => BigDecimal(1)
+                    }
+                  }
+
+                  val historyJson = products.map { product =>
+                    val currentPrice = getCurrentPrice(product.entreprise)
+                    val rendement = computeReturn(product.entreprise, currentPrice)
+
+                    Json.obj(
+                      "id" -> product.investmentId,
+                      "companyName" -> product.entreprise,
+                      "quantity" -> product.numshare,
+                      "price" -> product.originalPrice,
+                      "created_at" -> product.createdAt.toString,
+                      "rendement" -> rendement,
+                      "averageReturn" -> computeAverageReturn(product.entreprise)
+                    )
+                  }
+
+                  complete(HttpEntity(ContentTypes.`application/json`, Json.obj(
+                    "success" -> true,
+                    "history" -> historyJson
+                  ).toString()))
+
+                case Failure(exception) =>
+                  println(s"❌ Erreur lors de la récupération des produits : ${exception.getMessage}")
+                  complete(HttpEntity(ContentTypes.`application/json`, Json.obj(
+                    "success" -> false,
+                    "message" -> "Erreur lors de la récupération des produits"
+                  ).toString()))
+              }
+            }
+          }
         }
+
+
+
       )
     }
 
