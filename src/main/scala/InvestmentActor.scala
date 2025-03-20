@@ -32,14 +32,14 @@ class InvestmentActor(dbService: DBInvestment,actor: ActorRef) extends Actor {
       val senderRef = sender()
 
       val result = for {
-        // 🔹 Vérifier le solde de l'utilisateur
+        //  Vérifier le solde de l'utilisateur
         balance <- (utilisateurActor ? UtilisateurActor.GetBalance1(userId)).mapTo[BigDecimal]
         newBalance = balance - amount
 
-        // 🔹 Vérifier si l'utilisateur a déjà investi
+        //  Vérifier si l'utilisateur a déjà investi
         existingInvestmentOpt <- dbService.getInvestmentByUserAndCompany(userId, companyName)
 
-        // 🔹 Vérifier le solde
+        //  Vérifier le solde
         _ <- if (newBalance < 0) {
           println(s" [InvestmentActor] Solde insuffisant pour investir $amount €")
           Future.successful(senderRef ! "Échec : Solde insuffisant")
@@ -47,7 +47,7 @@ class InvestmentActor(dbService: DBInvestment,actor: ActorRef) extends Actor {
           (utilisateurActor ? UtilisateurActor.updateBalance(userId, newBalance)).map(_ => ())
         }
 
-        // 🔹 Mise à jour ou ajout de l'investissement
+        //  Mise à jour ou ajout de l'investissement
         investmentId <- existingInvestmentOpt match {
           case Some(existingInvestment) =>
             val updatedAmount = existingInvestment.amountInvested + amount
@@ -106,7 +106,7 @@ class InvestmentActor(dbService: DBInvestment,actor: ActorRef) extends Actor {
 
     case RecupererlaSomme(companyName, id, sommeInvesti) =>
       val senderRef = sender()
-      println(s"📢 [InvestmentActor] Demande reçue pour récupérer $sommeInvesti de $companyName (User ID: $id)")
+      println(s" InvestmentActor:Demande reçue pour récupérer $sommeInvesti de $companyName (User ID: $id)")
 
       val result = for {
         updateResult <- (self ? UpdateInvestment(id, companyName, 0)).mapTo[String]

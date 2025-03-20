@@ -67,7 +67,7 @@ object MarketstackDataFetcher {
 
   // Méthode main pour tester
   def main(args: Array[String]): Unit = {
-    println("📩 Démarrage du test de récupération des données de marché...")
+    println(" Démarrage du test de récupération des données de marché...")
 
     // Appeler la fonction pour récupérer les 6 derniers prix de marché pour DOGE
     getSymbolLastPrices("BTC")

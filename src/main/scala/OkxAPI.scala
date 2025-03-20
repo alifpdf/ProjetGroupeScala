@@ -57,7 +57,7 @@ object OkxAPI {
 
 
   def main(args: Array[String]): Unit = {
-    println("📩 Démarrage du test de récupération des prix des cryptos...")
+    println("Démarrage du test de récupération des prix des cryptos...")
 
     getPrices()
 
