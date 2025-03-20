@@ -7,8 +7,8 @@ import play.api.libs.json._
 
 object OkxAPI {
 
-  val apiKey = "2b7bd3ab-1a0c-4d48-bae9-54f1dcc62e69"
-  val secretKey = "E2B5EE85C2E604ACB51681AED8D51ED1"
+  val apiKey = "751b37d3-e834-4dcf-9591-5afa39c8cee0"
+  val secretKey = "3DAFC01A28E3D48271522D59BA0CBCF8"
   val baseUrl = "https://www.okx.com/api/v5"
 
   implicit val system: ActorSystem = ActorSystem("OkxAPI")
@@ -45,15 +45,23 @@ object OkxAPI {
   }
 
   def getPrice(crypto: String): Future[Double] = {
-    fetchCryptoPrices().map(_.getOrElse(crypto, 0.0))
+    val finalCrypto = crypto match {
+      case "BTC"      => "BTC-USDT"
+      case "ETH"      => "ETH-USDT"
+      case "DOGE"     => "DOGE-USDT"
+      case other      => other // Si déjà formaté "BTC-USDT", "ETH-USDT", etc.
+    }
+
+    fetchCryptoPrices().map(_.getOrElse(finalCrypto, 0.0))
   }
+
 
   def main(args: Array[String]): Unit = {
     println("📩 Démarrage du test de récupération des prix des cryptos...")
 
     getPrices()
 
-    getPrice("BTC-USDT").map { price =>
+    getPrice("BTC").map { price =>
       val adjustedPrice = price / 1.09
       println(s"Prix actuel de BTC-USD : $adjustedPrice EUR USDT")
     }.recover {
