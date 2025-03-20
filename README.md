@@ -1,12 +1,12 @@
-###Rapport d’Architecture du Projet - Gestion de Portefeuilles d’Investissement en Cryptomonnaies
+### Rapport d’Architecture du Projet - Gestion de Portefeuilles d’Investissement en Cryptomonnaies
 
-###Introduction
+### Introduction
 Ce document présente l’architecture complète de la plateforme développée pour gérer des portefeuilles d’investissement en cryptomonnaies. Le projet vise à offrir une solution robuste, scalable et réactive permettant :
 La visualisation en temps réel des performances
 Les calculs financiers (NAV, Sharpe Ratio)
 Une communication temps réel via WebSockets
 
-###Attribution des rôles
+### Attribution des rôles
 Back-end :
 ALI SEKANDER Alif: Base de données, Acteur, Akka stream, Websocket
 Provent Amaury:Acteur, Base de données, Web socket
@@ -19,14 +19,7 @@ Login et Inscription: ALI SEKANDER Alif
 Décoration site:BEDUE Lucas, PROVENT Amaury
  
 
-
-
-
-
-
-
-
-###Architecture Backend - Scala & Akka
+### Architecture Backend - Scala & Akka
 Le backend est construit en Scala, exploitant les puissants modules Akka pour la gestion des flux, la concurrence et la réactivité.
  Principaux Composants Backend :
 Akka Streams
@@ -43,7 +36,7 @@ DBUtilisateur : Gestion des utilisateurs, soldes et authentification
 DBProducts : Gestion des produits liés aux investissement
 DBNotification
 
-###WebSocketsServor
+### WebSocketsServor
 WebSocketServer expose l’API REST et la WebSocket
 Reponse/requête One shot pour les requête concernant une communication avec la base de données
 Reponse/requête One shot pour les requête concernant une calcul financière
@@ -55,7 +48,7 @@ MarketstackDataFetcher : Récupération d’historique de prix pour l’analyse
 
 
 
-###Base de Données - PostgreSQL avec Slick
+### Base de Données - PostgreSQL avec Slick
 Modélisation relationnelle :
 Users : Données utilisateurs, solde
 Investments : Historique des investissements
@@ -64,7 +57,7 @@ Notifications : Journalisation des messages envoyés
  Exécution automatisée du script SQL
 Chargement des tables au démarrage via Main.scala
 
-###Frontend - ReactJS Moderne & Connecté
+### Frontend - ReactJS Moderne & Connecté
 Le frontend propose une interface interactive et réactive en ReactJS, pilotée par WebSocket et REST.
 ###Principaux Composants :
 App.js
@@ -85,13 +78,13 @@ Détection automatique de stratégie d’investissement recommandée (Défensive
 Synchronisation WebSocket et récupération dynamique des prix crypto
 
 
-###RealTimeCharts.js
+### RealTimeCharts.js
 Affiche en temps réel :
 La répartition des actifs BTC, ETH, DOGE
 Les courbes d’évolution des prix et du portefeuille
 
 
-###Calcul de Stratégies d'Investissement
+### Calcul de Stratégies d'Investissement
 
 Rendement Simple
 rendement simple d’un actif sur une période donnée
@@ -122,7 +115,7 @@ R = Rendement moyen
 
 
 
-###Sharpe Ratio
+### Sharpe Ratio
 mesurer la performance ajustée au risque
 
 S = Rp-Rfp
@@ -136,7 +129,7 @@ S>2 : Très bon portefeuille
 S<1 : Risque trop élevé pour le rendement obtenu
 
 
-###Valeur nette du portefeuille (Net Asset Value)
+### Valeur nette du portefeuille (Net Asset Value)
 la valeur totale des actifs d’un portefeuille après soustraction des dettes éventuelles
 
 NAV =QiPi-D
@@ -145,14 +138,7 @@ Pi = Prix actuel de l’actif iii
 D = Dettes éventuelles (ex : marges, prêts)
 
 
-
-
-
-
-
-
-
-Technologie utiliser pour le Projet
+### Technologie utiliser pour le Projet
 
 Projet en Akka
 scala build tools (sbt) pour builds
@@ -165,5 +151,4 @@ Chart.js pour la visualisation dynamique de graphique
 WebSocket pour les notifications en temps réel vers les utilisateurs
 Lucide-react pour le visuel
 Okx API pour la relation au crypto
-
 opération CRUD (Create, Read, Update, Delete) avec les Actor
