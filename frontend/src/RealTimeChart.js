@@ -361,7 +361,7 @@ function RealTimeChart() {
                         <ul style={{ listStyleType: "none", padding: 0 }}>
                             {investments.map((inv, index) => (
                                 <li key={inv.id || index} style={{ marginBottom: "10px" }}>
-                                    {inv.companyName} - 💰 {inv.amountInvested}€ - {inv.originalPrice}
+                                    {inv.companyName} - {inv.amountInvested}€ - {inv.originalPrice}
                                     <button onClick={() => recupererSomme(inv.companyName, inv.userId, inv.amountInvested)} style={{ marginLeft: "10px", backgroundColor: "red", color: "white", borderRadius: "5px" }}>
                                         Récupérer
                                     </button>

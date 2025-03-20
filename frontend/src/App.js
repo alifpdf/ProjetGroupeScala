@@ -13,7 +13,7 @@ function App() {
     useEffect(() => {
         const ws = new WebSocket("ws://localhost:8080/ws");
 
-        ws.onopen = () => console.log("✅ WebSocket connecté !");
+        ws.onopen = () => console.log("WebSocket connecté !");
         ws.onmessage = (event) => {
             try {
                 const data = JSON.parse(event.data);
@@ -21,18 +21,18 @@ function App() {
                     setNotifications((prev) => [...prev, data.message]);
                 }
             } catch (error) {
-                console.error("❌ Erreur JSON :", error);
+                console.error("ERROR: JSON :", error);
             }
         };
-        ws.onerror = (error) => console.error("❌ Erreur WebSocket :", error);
-        ws.onclose = () => console.log("❌ WebSocket déconnecté.");
+        ws.onerror = (error) => console.error("ERROR: WebSocket :", error);
+        ws.onclose = () => console.log("WebSocket déconnecté.");
         return () => ws.close();
     }, []);
 
     return (
         <div className="app-container">
             <header className="header">
-                <h1 className="title">📊 Finance App</h1>
+                <h1 className="title">CY Tech SmartFinance </h1>
                 <nav className="nav">
                     <button className="nav-button" onClick={() => setPage("home")}><Home className="icon" /> Accueil</button>
                     <button className="nav-button" onClick={() => setPage("login")}><LogIn className="icon" /> Connexion</button>
