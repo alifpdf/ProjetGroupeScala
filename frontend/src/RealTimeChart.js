@@ -24,7 +24,6 @@ ChartJS.register(
     BarElement
 );
 
-
 function RealTimeChart() {
     const [numberBTC, setNumberBTC] = useState("En attente...");
     const [numberETH, setNumberETH] = useState("En attente...");
@@ -44,6 +43,16 @@ function RealTimeChart() {
     const [numShares, setNumShares] = useState(1);
     const [ratios, setRatios] = useState({ BTC: 0, ETH: 0, DOGE: 0 });
 
+    // Définir un mappage fixe des couleurs pour chaque entreprise
+    const companyColorMap = {
+        'BTC': '#FF6384',
+        'ETH': '#36A2EB',
+        'DOGE': '#FFCE56',
+        // Couleurs supplémentaires pour d'autres entreprises potentielles
+        'default1': '#4BC0C0',
+        'default2': '#9966FF',
+        'default3': '#FF9F40'
+    };
 
     const [investmentData, setInvestmentData] = useState({
         labels: [],
@@ -57,7 +66,6 @@ function RealTimeChart() {
     // connexion WebSocket et récupération des notifications
     useEffect(() => {
         const fetchLastPrices = async () => {
-
             const response = await fetch("http://localhost:8080/api/get-last-prices", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" }
@@ -77,7 +85,6 @@ function RealTimeChart() {
 
                 setLabels(BTC.map((_, index) => new Date().toLocaleTimeString()));
             }
-
         };
 
         fetchLastPrices();
@@ -90,7 +97,6 @@ function RealTimeChart() {
         ws.onopen = () => console.log("WebSocket connecté");
 
         ws.onmessage = (event) => {
-
             const message = JSON.parse(event.data);
 
             if (message.type === "random") {
@@ -119,24 +125,25 @@ function RealTimeChart() {
                     const filteredInvestments = message.investments.filter(inv => inv.userId === user.id);
                     setInvestments(filteredInvestments);
 
-                    // Mettre à jour les données du graphique en camembert
+                    // Mettre à jour les données du graphique en camembert avec des couleurs fixes
                     const investmentLabels = filteredInvestments.map(inv => inv.companyName);
                     const investmentAmounts = filteredInvestments.map(inv => inv.amountInvested);
-                    const colors = ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40'];
+
+                    // Utiliser le mappage de couleurs fixe pour chaque entreprise
+                    const backgroundColors = investmentLabels.map(label =>
+                        companyColorMap[label] || companyColorMap.default1);
 
                     setInvestmentData({
                         labels: investmentLabels,
                         datasets: [{
                             data: investmentAmounts,
-                            backgroundColor: colors.slice(0, investmentLabels.length),
-                            hoverBackgroundColor: colors.slice(0, investmentLabels.length)
+                            backgroundColor: backgroundColors,
+                            hoverBackgroundColor: backgroundColors
                         }]
                     });
                 }
             }
-
         };
-
 
         return () => ws.close();
     }, [user]);
@@ -149,6 +156,7 @@ function RealTimeChart() {
             default: return 0;
         }
     };
+
     const fetchCalculatedSum = async () => {
         if (!user) return;
         try {
@@ -176,7 +184,6 @@ function RealTimeChart() {
         }
     };
 
-
     const investir = async () => {
         if (!user) {
             alert("Vous devez être connecté pour investir");
@@ -184,7 +191,6 @@ function RealTimeChart() {
         }
 
         const totalInvestment = getCurrentPrice(selectedCompany) * numShares;
-
 
         const response = await fetch("http://localhost:8080/api/investir", {
             method: "POST",
@@ -205,14 +211,11 @@ function RealTimeChart() {
             fetchUpdatedData();
             fetchBalance();
             fetchCalculatedSum();  // MAJ des ratios automatiquement
-
         }
-
     };
 
     // appelle de l'API (route) recuperer-somme
     const recupererSomme = async (companyName, userId, sommeInvesti) => {
-
         const response = await fetch("http://localhost:8080/api/recuperer-somme", {
             method: "POST",
             headers: {
@@ -229,12 +232,10 @@ function RealTimeChart() {
             fetchUpdatedData();
             fetchBalance();
         }
-
     };
 
     // appelle de l'API (route) get-investments
     const fetchUpdatedData = async () => {
-
         const response = await fetch("http://localhost:8080/api/get-investments", {
             method: "POST",
             headers: {
@@ -248,6 +249,25 @@ function RealTimeChart() {
         if (message.success) {
             setInvestments(Array.isArray(message.investments) ? message.investments : []);
 
+            // Mettre à jour les données du graphique en camembert avec des couleurs fixes
+            if (Array.isArray(message.investments)) {
+                const investmentLabels = message.investments.map(inv => inv.companyName);
+                const investmentAmounts = message.investments.map(inv => inv.amountInvested);
+
+                // Utiliser le mappage de couleurs fixe pour chaque entreprise
+                const backgroundColors = investmentLabels.map(label =>
+                    companyColorMap[label] || companyColorMap.default1);
+
+                setInvestmentData({
+                    labels: investmentLabels,
+                    datasets: [{
+                        data: investmentAmounts,
+                        backgroundColor: backgroundColors,
+                        hoverBackgroundColor: backgroundColors
+                    }]
+                });
+            }
+
             if (message.updatedBalance !== undefined) {
                 const updatedUser = { ...user, balance: message.updatedBalance };
                 setUser(updatedUser);
@@ -258,7 +278,6 @@ function RealTimeChart() {
                 }
             }
         }
-
     };
 
     // MAJ de la balance (porte monnaie) appelle de l'api (route) get-balance
@@ -282,118 +301,146 @@ function RealTimeChart() {
                 setLockedBalance(data.balance);
             }
         }
-
     };
 
     /*  --- Le Html --- */
     return (
-        <div style={{ textAlign: "center", marginTop: "50px" }}>
-            <h2>Valeurs en temps réel</h2>
-            <p>BTC: {numberBTC}€</p>
-            <p>ETH: {numberETH}€</p>
-            <p>DOGE: {numberDOGE}€</p>
+        <div className="chart-main-container">
+            <h2 className="chart-title">Valeurs en temps réel</h2>
 
-            <div style={{ width: "700px", margin: "auto" }}>
-                <h2>Graphique en Temps Réel</h2>
-                <Line
-                    data={{
-                        labels,
-                        datasets: [
-                            { label: "BTC", data: dataBTC, borderColor: "blue", fill: false },
-                            { label: "ETH", data: dataETH, borderColor: "red", fill: false },
-                            { label: "DOGE", data: dataDOGE, borderColor: "green", fill: false }
-                        ]
-                    }}
-                />
+            <div className="crypto-values-grid">
+                <div className="crypto-value-card">
+                    <p className="crypto-value-text btc-text">BTC: {numberBTC}€</p>
+                </div>
+                <div className="crypto-value-card">
+                    <p className="crypto-value-text eth-text">ETH: {numberETH}€</p>
+                </div>
+                <div className="crypto-value-card">
+                    <p className="crypto-value-text doge-text">DOGE: {numberDOGE}€</p>
+                </div>
             </div>
 
-            <div style={{ marginTop: "20px" }}>
-                <h2>Ratios Calculés (Auto)</h2>
-                <p>BTC Ratio: {ratios.BTC}</p>
-                <p>ETH Ratio: {ratios.ETH}</p>
-                <p>DOGE Ratio: {ratios.DOGE}</p>
-            </div>
-            <div style={{ width: "600px", margin: "20px auto" }}>
-                <h2>Visualisation des Ratios</h2>
-                <Bar
-                    data={{
-                        labels: ["BTC", "ETH", "DOGE"],
-                        datasets: [
-                            {
-                                label: "Ratios Calculés",
-                                data: [ratios.BTC, ratios.ETH, ratios.DOGE],
-                                backgroundColor: ["#FF6384", "#36A2EB", "#FFCE56"], // choix de couleurs pour représenter les crypto
-                                borderRadius: 5,
-                            },
-                        ],
-                    }}
-                    options={{
-                        responsive: true,
-                        plugins: {
-                            legend: { display: false },
-                            tooltip: { enabled: true }
-                        },
-                        scales: {
-                            y: {
-                                beginAtZero: true
-                            }
-                        }
-                    }}
-                />
+            <div className="chart-outer-container">
+                <h2 className="chart-subtitle">Graphique en Temps Réel</h2>
+                <div className="chart-inner-container">
+                    <Line
+                        data={{
+                            labels,
+                            datasets: [
+                                { label: "BTC", data: dataBTC, borderColor: companyColorMap.BTC, fill: false },
+                                { label: "ETH", data: dataETH, borderColor: companyColorMap.ETH, fill: false },
+                                { label: "DOGE", data: dataDOGE, borderColor: companyColorMap.DOGE, fill: false }
+                            ]
+                        }}
+                    />
+                </div>
             </div>
 
+            <div className="chart-outer-container">
+                <h2 className="chart-subtitle">Ratios Calculés (Auto)</h2>
+                <div className="ratios-grid">
+                    <div className="ratio-value-card">
+                        <p className="ratio-value-text btc-text">BTC Ratio: {ratios.BTC}</p>
+                    </div>
+                    <div className="ratio-value-card">
+                        <p className="ratio-value-text eth-text">ETH Ratio: {ratios.ETH}</p>
+                    </div>
+                    <div className="ratio-value-card">
+                        <p className="ratio-value-text doge-text">DOGE Ratio: {ratios.DOGE}</p>
+                    </div>
+                </div>
 
+                <div className="chart-inner-container">
+                    <Bar
+                        data={{
+                            labels: ["BTC", "ETH", "DOGE"],
+                            datasets: [
+                                {
+                                    label: "Ratios Calculés",
+                                    data: [ratios.BTC, ratios.ETH, ratios.DOGE],
+                                    backgroundColor: [companyColorMap.BTC, companyColorMap.ETH, companyColorMap.DOGE],
+                                    borderRadius: 5,
+                                },
+                            ],
+                        }}
+                    />
+                </div>
+            </div>
 
-            {user ? ( // si connecter
-                <>
-                    <h3>Solde : {lockedBalance !== null ? `${lockedBalance}€` : "Chargement.."}</h3>
+            {user ? (
+                <div className="user-account-section">
+                    <div className="user-balance-display">
+                        Solde : {lockedBalance !== null ? `${lockedBalance}€` : "Chargement.."}
+                    </div>
 
-                    <h2>Investir dans une action</h2>
-                    <select value={selectedCompany} onChange={(e) => setSelectedCompany(e.target.value)}>
-                        <option value="BTC">BTC</option>
-                        <option value="ETH">ETH</option>
-                        <option value="DOGE">DOGE</option>
-                    </select>
-                    <input type="number" min="1" value={numShares} onChange={(e) => setNumShares(parseInt(e.target.value) || 1)} />
-                    <button onClick={investir}>Investir</button>
+                    <h2 className="chart-subtitle">Investir dans une action</h2>
+                    <div className="investment-controls">
+                        <select
+                            className="investment-select"
+                            value={selectedCompany}
+                            onChange={(e) => setSelectedCompany(e.target.value)}
+                        >
+                            <option value="BTC">BTC</option>
+                            <option value="ETH">ETH</option>
+                            <option value="DOGE">DOGE</option>
+                        </select>
+                        <input
+                            className="investment-input"
+                            type="number"
+                            min="1"
+                            value={numShares}
+                            onChange={(e) => setNumShares(parseInt(e.target.value) || 1)}
+                        />
+                        <button className="investment-button" onClick={investir}>Investir</button>
+                    </div>
 
-                    <div style={{ display: "flex", justifyContent: "space-around", marginTop: "20px" }}>
-                        <ul style={{ listStyleType: "none", padding: 0 }}>
-                            {investments.map((inv, index) => (
-                                <li key={inv.id || index} style={{ marginBottom: "10px" }}>
-                                    {inv.companyName} - {inv.amountInvested}€ - {inv.originalPrice}
-                                    <button onClick={() => recupererSomme(inv.companyName, inv.userId, inv.amountInvested)} style={{ marginLeft: "10px", backgroundColor: "red", color: "white", borderRadius: "5px" }}>
-                                        Récupérer
-                                    </button>
-                                </li>
-                            ))}
-                        </ul>
-                        <div style={{ width: "300px", height: "300px" }}>
-                            <h2>Répartition des Investissements</h2>
-                            <Pie data={investmentData} options={{
-                                plugins: {
-                                    tooltip: {
-                                        callbacks: {
-                                            label: function (tooltipItem) {
-                                                const label = tooltipItem.label || '';
-                                                const value = tooltipItem.raw || 0;
-                                                const total = tooltipItem.dataset.data.reduce((acc, val) => acc + val, 0);
-                                                const percentage = ((value / total) * 100).toFixed(2);
-                                                return `${label}: ${value}€ (${percentage}%)`;
+                    <div className="investments-display">
+                        <div className="investments-list-container">
+                            <h2 className="chart-subtitle">Vos investissements</h2>
+                            <ul>
+                                {investments.map((inv, index) => (
+                                    <li key={inv.id || index} className="investment-item">
+                                        <span>{inv.companyName} - {inv.amountInvested}€ - {inv.originalPrice}</span>
+                                        <button
+                                            className="recover-button"
+                                            onClick={() => recupererSomme(inv.companyName, inv.userId, inv.amountInvesti)}
+                                        >
+                                            Récupérer
+                                        </button>
+                                    </li>
+                                ))}
+                            </ul>
+                        </div>
+
+                        <div className="pie-chart-outer-container">
+                            <h2 className="chart-subtitle">Répartition des Investissements</h2>
+                            <Pie
+                                data={investmentData}
+                                options={{
+                                    plugins: {
+                                        tooltip: {
+                                            callbacks: {
+                                                label: function (tooltipItem) {
+                                                    const label = tooltipItem.label || '';
+                                                    const value = tooltipItem.raw || 0;
+                                                    const total = tooltipItem.dataset.data.reduce((acc, val) => acc + val, 0);
+                                                    const percentage = ((value / total) * 100).toFixed(2);
+                                                    return `${label}: ${value}€ (${percentage}%)`;
+                                                }
                                             }
+                                        },
+                                        legend: {
+                                            display: true,
+                                            position: 'bottom'
                                         }
-                                    },
-                                    legend: {
-                                        display: true,
-                                        position: 'bottom'
                                     }
-                                }
-                            }} />
+                                }}
+                            />
                         </div>
                     </div>
-                </>
+                </div>
             ) : (
-                <div>
+                <div className="login-prompt">
                     <h3>Veuillez vous connecter pour voir votre solde et vos investissements.</h3>
                 </div>
             )}
