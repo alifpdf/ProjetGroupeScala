@@ -340,7 +340,7 @@ function InvestmentStrategies() {
                         </>
                     ) : (
                         <div className="history-container">
-                            <h3>🕒 Historique des Achats</h3>
+                            <h3>Historique des Achats</h3>
                             <table className="history-table">
                                 <thead>
                                 <tr>
