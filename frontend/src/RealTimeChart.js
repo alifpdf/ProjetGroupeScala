@@ -249,12 +249,10 @@ function RealTimeChart() {
         if (message.success) {
             setInvestments(Array.isArray(message.investments) ? message.investments : []);
 
-            // Mettre à jour les données du graphique en camembert avec des couleurs fixes
             if (Array.isArray(message.investments)) {
                 const investmentLabels = message.investments.map(inv => inv.companyName);
                 const investmentAmounts = message.investments.map(inv => inv.amountInvested);
 
-                // Utiliser le mappage de couleurs fixe pour chaque entreprise
                 const backgroundColors = investmentLabels.map(label =>
                     companyColorMap[label] || companyColorMap.default1);
 
