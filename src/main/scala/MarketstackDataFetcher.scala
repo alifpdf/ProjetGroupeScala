@@ -13,7 +13,7 @@ object MarketstackDataFetcher {
   implicit val system: ActorSystem = ActorSystem("MarketstackDataFetcher")
   implicit val ec: ExecutionContext = system.dispatcher
 
-  val apiKey = "8717ecfc3c4fff52643a4e0e9ad088734" //j'ai ajoute 4
+  val apiKey = "8717ecfc3c4fff52643a4e0e9ad08873" //j'ai ajoute 4
   val baseUrl = "http://api.marketstack.com/v1"
 
   // Fonction pour récupérer les 6 dernières données de marché pour un symbole
@@ -32,8 +32,8 @@ object MarketstackDataFetcher {
 
       val data = (json \ "data").asOpt[JsArray]
       val multiplier = symbol match {
-        case "BTC" => 10000
-        case "ETH" => 1000
+        case "BTC" => 100000
+        case "ETH" => 10000
         case _     => 1
       }
 
