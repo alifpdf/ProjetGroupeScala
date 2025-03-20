@@ -23,7 +23,7 @@ Ce projet est une application web permettant de suivre en temps réel les prix d
 - **JDBC** : Interface pour exécuter des requêtes SQL  
 - **Slick** : Bibliothèque Scala pour interagir avec PostgreSQL  
 - **Play Framework** : Framework web pour créer l'API backend  
-- **Okx API** : Récupération des données du marché crypto  
+- **Okx API & Marketstack** : Récupération des données du marché crypto  
 
 ### Front-end  
 - **Node.js** : Gestion des dépendances et exécution du projet React  
