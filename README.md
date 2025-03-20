@@ -3,11 +3,14 @@
 Ce projet est une application web permettant de suivre en temps réel les prix des cryptomonnaies, gérer les investissements et visualiser les données sous forme de graphiques dynamiques.  
 
 ## Fonctionnalités  
-- Suivi des prix des cryptomonnaies en temps réel  
-- Notifications WebSocket pour les mises à jour instantanées  
-- Visualisation des données avec **Chart.js**  
-- Gestion des investissements avec **CRUD (Create, Read, Update, Delete)**  
-- Intégration de l'API **OKX** pour récupérer les données du marché  
+
+- Suivi des prix des cryptomonnaies en temps réel
+- Notifications des événements marquants
+- Visualisation des données avec Chart.js
+- Gestion et stratégies d'investissement
+- Intégration de l'API OKX pour récupérer les données du marché
+- Historique des achats réalisés
+- Taux de rendement des différents investissements réalisés
 
 ---
 
