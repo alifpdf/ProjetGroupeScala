@@ -3,6 +3,8 @@ import RealTimeChart from "./RealTimeChart";
 import SignUpForm from "./SignUpForm";
 import LoginForm from "./LoginForm";
 import InvestmentStrategies from "./InvestmentStrategies";
+import "./App.css";
+import { Bell, Home, LogIn, UserPlus, TrendingUp } from "lucide-react";
 
 function App() {
     const [page, setPage] = useState("home");
@@ -11,63 +13,53 @@ function App() {
     useEffect(() => {
         const ws = new WebSocket("ws://localhost:8080/ws");
 
-        ws.onopen = () => {
-            console.log("✅ WebSocket connecté !");
-        };
-
+        ws.onopen = () => console.log("WebSocket connecté !");
         ws.onmessage = (event) => {
             try {
                 const data = JSON.parse(event.data);
-                console.log("📩 Message reçu :", data);
-
                 if (data.type === "notification") {
                     setNotifications((prev) => [...prev, data.message]);
                 }
             } catch (error) {
-                console.error("❌ Erreur lors du parsing JSON :", error);
+                console.error("ERROR: JSON :", error);
             }
         };
-
-        ws.onerror = (error) => console.error("❌ Erreur WebSocket :", error);
-        ws.onclose = () => console.log("❌ WebSocket déconnecté.");
-
+        ws.onerror = (error) => console.error("ERROR: WebSocket :", error);
+        ws.onclose = () => console.log("WebSocket déconnecté.");
         return () => ws.close();
     }, []);
 
     return (
-        <div>
-            <h1>📊 Application Finance</h1>
+        <div className="app-container">
+            <header className="header">
+                <h1 className="title">CY Tech SmartFinance </h1>
+                <nav className="nav">
+                    <button className="nav-button" onClick={() => setPage("home")}><Home className="icon" /> Accueil</button>
+                    <button className="nav-button" onClick={() => setPage("login")}><LogIn className="icon" /> Connexion</button>
+                    <button className="nav-button" onClick={() => setPage("signup")}><UserPlus className="icon" /> Inscription</button>
+                    <button className="nav-button" onClick={() => setPage("chart")}><TrendingUp className="icon" /> Graphique</button>
+                    <button className="nav-button" onClick={() => setPage("strategie")}><Bell className="icon" /> Stratégie</button>
+                </nav>
+            </header>
 
-            {/* 🔔 Affichage des notifications */}
-            {notifications.length > 0 && (
-                <div style={{
-                    backgroundColor: "#ffeb3b",
-                    padding: "10px",
-                    marginBottom: "10px",
-                    borderRadius: "5px"
-                }}>
-                    <h3>🔔 Notifications</h3>
-                    {notifications.map((notif, index) => (
-                        <p key={index}>{notif}</p>
-                    ))}
+            <main className="main-content">
+                {notifications.length > 0 && (
+                    <div className="notification-card">
+                        <h3>🔔 Notifications</h3>
+                        {notifications.map((notif, index) => (
+                            <p key={index}>{notif}</p>
+                        ))}
+                    </div>
+                )}
+
+                <div className="content-card">
+                    {page === "home" && <h2 className="welcome">Bienvenue sur l'application de finance !</h2>}
+                    {page === "login" && <LoginForm />}
+                    {page === "signup" && <SignUpForm />}
+                    {page === "chart" && <RealTimeChart />}
+                    {page === "strategie" && <InvestmentStrategies />}
                 </div>
-            )}
-
-            {/* ✅ Navigation */}
-            <nav>
-                <button onClick={() => setPage("home")}>Accueil</button>
-                <button onClick={() => setPage("login")}>Se connecter</button>
-                <button onClick={() => setPage("signup")}>S'inscrire</button>
-                <button onClick={() => setPage("chart")}>Voir le graphique</button>
-                <button onClick={() => setPage("strategie")}>Strategie</button>
-            </nav>
-
-            {/* ✅ Affichage des pages */}
-            {page === "home" && <h2>Bienvenue sur l'application de finance !</h2>}
-            {page === "login" && <LoginForm />}
-            {page === "signup" && <SignUpForm />}
-            {page === "chart" && <RealTimeChart />}
-            {page === "strategie" && <InvestmentStrategies />}
+            </main>
         </div>
     );
 }
