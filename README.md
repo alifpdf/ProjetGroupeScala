@@ -1,4 +1,4 @@
-# Projet Finance & Crypto Tracking  
+# Projet Finance Scala
 
 Ce projet est une application web permettant de suivre en temps réel les prix des cryptomonnaies, gérer les investissements et visualiser les données sous forme de graphiques dynamiques.  
 
