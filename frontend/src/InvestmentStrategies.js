@@ -2,54 +2,51 @@ import React, { useState, useEffect } from "react";
 import "./InvestmentStrategies.css";
 
 function InvestmentStrategies() {
-    const [investments, setInvestments] = useState([]);
-    const [history, setPurchaseHistory] = useState([]);
-    const [user, setUser] = useState(() => JSON.parse(localStorage.getItem("user")));
-    const [nav, setNav] = useState(0);
-    const [sharpeRatio, setSharpeRatio] = useState(0);
-    const [volatility, setVolatility] = useState(0);
+    const [investments, setInvestments] = useState([]); // liste des investissement
+    const [history, setPurchaseHistory] = useState([]); // listes des produits (acheter)
+    const [user, setUser] = useState(() => JSON.parse(localStorage.getItem("user"))); // le user
+    const [nav, setNav] = useState(0); // Nav (Net Asset Value)
+    const [sharpeRatio, setSharpeRatio] = useState(0); // ratio sharp
+    const [volatility, setVolatility] = useState(0); // volatilité
     const [ws, setWs] = useState(null);
-    const [totalInvestments, setTotalInvestments] = useState(0);
-    const [balance, setBalance] = useState(0);
-    const [btc, setBtc] = useState(0);
-    const [eth, setEth] = useState(0);
-    const [doge, setDoge] = useState(0);
+    const [totalInvestments, setTotalInvestments] = useState(0); // sommes des produits d'un investissement
+    const [balance, setBalance] = useState(0); // porte monnai de l'utilisateur
+    const [btc, setBtc] = useState(0); // bitcoin
+    const [eth, setEth] = useState(0); // ether
+    const [doge, setDoge] = useState(0); // doge coin
     const [activeTab, setActiveTab] = useState("portfolio");
 
+    // connexion WebSocket et récupération des notifications
     useEffect(() => {
         if (user) {
             const websocket = new WebSocket("ws://localhost:8080/ws");
             setWs(websocket);
 
             websocket.onopen = () => {
-                console.log("✅ Connexion WebSocket établie");
+                console.log("Connexion WebSocket établie");
             };
 
             websocket.onmessage = (event) => {
                 const data = JSON.parse(event.data);
-                console.log("Données reçues du WebSocket:", data);
+                //console.log("données reçues du WebSocket pour RealTimesChart.js");
 
                 if (data.type === "update") {
-                    console.log("📢 Mise à jour des investissements reçue:", data);
+                    console.log("MAJ des investissements reçu");
 
                     if (data.balance && !isNaN(data.balance)) {
                         setBalance(data.balance);
-                    } else {
-                        console.error("❌ Balance non valide:", data.balance);
-                    }
+
+                    } else {console.error("ERROR: balance invalide");}
 
                     if (data.investments) {
                         setInvestments(data.investments);
                         calculateFinancialIndicators(data.investments);
                         calculateTotalInvestments(data.investments);
-                    } else {
-                        console.error("❌ Investissements non trouvés:", data.investments);
-                    }
 
-                    // Mettre à jour l'historique des achats si présent
-                    if (data.history) {
-                        setPurchaseHistory(data.history);
-                    }
+                    } else {console.error("ERROR: Investissements non trouvés");}
+
+                    // MAJ de l'historique si besoin
+                    if (data.history) {setPurchaseHistory(data.history);}
                 }
                 if (data.type === "random") {
                     const newBTC = parseFloat(data.data);
@@ -61,18 +58,12 @@ function InvestmentStrategies() {
                 }
             };
 
-            websocket.onerror = (error) => {
-                console.error("❌ Erreur WebSocket:", error);
-            };
+            websocket.onerror = (error) => {console.error("ERROR: WebSocket:", error);};
 
-            websocket.onclose = () => {
-                console.log("❌ Connexion WebSocket fermée");
-            };
+            websocket.onclose = () => {console.log("ERROR: Connexion fermée");};
 
             return () => {
-                if (websocket) {
-                    websocket.close();
-                }
+                if (websocket) { websocket.close(); }
             };
         }
     }, [user]);
@@ -81,9 +72,11 @@ function InvestmentStrategies() {
         if (user) {
             fetchBalance();
             fetchPurchaseHistory();
+
         }
     }, [user]);
 
+    // met à jour la balance (porte monnaie)
     const fetchBalance = async () => {
         try {
             const response = await fetch("http://localhost:8080/api/get-balance", {
@@ -97,15 +90,14 @@ function InvestmentStrategies() {
             const data = await response.json();
             if (data.success) {
                 setBalance(data.balance);
-                console.log(`📢 Balance mise à jour : ${data.balance}`);
-            } else {
-                console.error("❌ Erreur lors de la récupération de la balance :", data.message);
-            }
-        } catch (error) {
-            console.error("❌ Erreur lors de la récupération du solde :", error);
-        }
+                //console.log(`balance MAJ : ${data.balance}`);
+
+            } else {console.error("ERROR: récupération de la balance :", data.message);}
+
+        } catch (error) {console.error("ERROR: récupération du solde :", error);}
     };
 
+    // cherche l'historique des achats d'un utilisateur
     const fetchPurchaseHistory = async () => {
         try {
             const response = await fetch("http://localhost:8080/api/get-products-history", {
@@ -117,36 +109,40 @@ function InvestmentStrategies() {
             });
 
             const data = await response.json();
-            console.log("📢 Réponse de l'API :", data); // Vérifier ce qui est reçu
+            //console.log("réponse de l'API :", data); // Verif reception
 
             if (data.success) {
                 if (data.history) {
                     setPurchaseHistory(data.history);
                 } else {
-                    console.error("❌ Aucune clé 'history' ou 'purchaseHistory' trouvée !");
+                    console.error("ERROR_0: 'history' ou 'purchaseHistory' introuvable");
                 }
             } else {
-                console.error("❌ Erreur lors de la récupération de l'historique :", data.message);
+                console.error("ERROR_1: récupération de l'historique");
             }
         } catch (error) {
-            console.error("❌ Erreur lors de la récupération de l'historique :", error);
+            console.error("ERROR_2: récupération de l'historique :", error);
         }
     };
 
+    // moyenne des rendement (ne marche pas)
+    // PLUS UTILISER !
     const calculateAverageReturn = (companyName, history) => {
         const relatedProducts = history.filter(product => product.companyName === companyName);
         const totalRendement = relatedProducts.reduce((sum, product) => sum + product.rendement, 0);
 
-        console.log(`🔹 Rendement total pour ${companyName}: ${totalRendement}`);
+        console.log(`Rendement total pour ${companyName}: ${totalRendement}`);
 
         return relatedProducts.length > 0 ? totalRendement / relatedProducts.length : 0;
     };
 
+    // retourne l'investissement total
     const calculateTotalInvestments = (investments) => {
         const total = investments.reduce((sum, investment) => sum + investment.amountInvested, 0);
         setTotalInvestments(total);
     };
 
+    // calcule les differents indicateur comme le ratio de sharp et la volatilité
     const calculateFinancialIndicators = (investments) => {
         if (investments.length === 0) return;
 
@@ -155,7 +151,7 @@ function InvestmentStrategies() {
             const randomRendement = Math.random() * 0.1 - 0.05;
             return price * randomRendement;
         });
-
+        // utilise des variables aléatoires
         const meanRendement = rendements.reduce((a, b) => a + b, 0) / rendements.length;
         const riskFreeRate = 0.02;
         const variance = rendements.reduce((sum, r) => sum + Math.pow(r - meanRendement, 2), 0) / rendements.length;
@@ -165,19 +161,25 @@ function InvestmentStrategies() {
         setSharpeRatio(stdDeviation === 0 ? 0 : (meanRendement - riskFreeRate) / stdDeviation);
     };
 
+    // variation du message de la strategies à adopter
     const getInvestmentStrategy = () => {
         if (sharpeRatio > 1 && volatility < 0.2) {
-            return <span style={{ color: "var(--secondary-color)" }}>Stratégie Défensive : Investissez dans des actifs sûrs (obligations, blue chips).</span>;
+            // couleur bleu
+            return <span style={{ color: "var(--secondary-color)" }}>Stratégie Défensive: Investissez dans des actifs sûrs.</span>;
         } else if (sharpeRatio > 1.5) {
-            notifyStrategy("Stratégie Équilibrée : Mélangez actions, ETF et crypto pour diversifier.");
-            return <span style={{ color: "var(--positive-color)" }}>Stratégie Équilibrée : Mélangez actions, ETF et crypto pour diversifier.</span>;
+            notifyStrategy("Stratégie Équilibrée: Mélangez actions, ETF et crypto pour diversifier.");
+            // couleur verte
+            return <span style={{ color: "var(--positive-color)" }}>Stratégie Équilibrée: Mélangez les crypto pour diversifier.</span>;
         } else if (sharpeRatio < 1 && volatility > 0.3) {
-            return <span style={{ color: "var(--negative-color)" }}>Stratégie Agressive : Vous prenez trop de risques ! Diversifiez vos placements.</span>;
+            // couleur rouge
+            return <span style={{ color: "var(--negative-color)" }}>Stratégie Agressive: Trop de risques, Diversifiez vos placements.</span>;
         } else {
-            return <span style={{ color: "var(--text-color)" }}>Stratégie Neutre : Continuez à surveiller vos investissements.</span>;
+            // couleur normal
+            return <span style={{ color: "var(--text-color)" }}>Stratégie Neutre: Restez attentif et surveiller vos investissements.</span>;
         }
     };
 
+    // récupère les prix actuel
     const getCurrentPrice = (company) => {
         switch (company) {
             case "BTC": return btc;
@@ -187,10 +189,12 @@ function InvestmentStrategies() {
         }
     };
 
+    // calcul le NAV (porte monnaie + actif)
     const calculateNav = () => {
         return balance + totalInvestments;
     };
 
+    // affiche un nombre (peut changer le nombre de chiffres après la virgule)
     const safeToFixed = (value, decimals = 2) => {
         return value !== undefined && value !== null ? value.toFixed(decimals) : "0.00";
     };
@@ -201,6 +205,7 @@ function InvestmentStrategies() {
         return ((currentPrice - originalPrice) / originalPrice) * 100;
     };
 
+    // récupération du message strategique dynamique
     const notifyStrategy = async (strategy) => {
         const strategyMessage = {
             strategy: strategy,
@@ -218,12 +223,11 @@ function InvestmentStrategies() {
 
             await response.json();
         } catch (error) {
-            console.error("❌ Erreur lors de la notification de la stratégie", error);
-            alert(`❌ Erreur lors de l'envoi de la notification : ${error.message}`);
+            console.error("ERROR: notification de la stratégie", error);
         }
     };
 
-    // Fonction pour formatter la date
+    // formate la date à une norme
     const formatDate = (timestamp) => {
         const date = new Date(timestamp);
         return date.toLocaleDateString('fr-FR', {
@@ -235,9 +239,10 @@ function InvestmentStrategies() {
         });
     };
 
+    /*  --- Le Html --- */
     return (
         <div className="investment-container">
-            <h2 className="investment-header">📊 Stratégies d'Investissement</h2>
+            <h2 className="investment-header">Stratégies d'Investissement</h2>
             {user ? (
                 <div className="investment-dashboard">
                     <div className="dashboard-tabs">
@@ -259,32 +264,32 @@ function InvestmentStrategies() {
                         <>
                             <div className="metrics-container">
                                 <div className="metric-card">
-                                    <h3>💰 Valeur Nette (NAV)</h3>
+                                    <h3>Valeur Nette (NAV)</h3>
                                     <p className="metric-value">{safeToFixed(calculateNav())}€</p>
                                 </div>
                                 <div className="metric-card">
-                                    <h3>📈 Ratio de Sharpe</h3>
+                                    <h3>Ratio de Sharpe</h3>
                                     <p className="metric-value">{safeToFixed(sharpeRatio)}</p>
                                 </div>
                                 <div className="metric-card">
-                                    <h3>📉 Volatilité</h3>
-                                    <p className="metric-value">{safeToFixed(volatility * 100)}%</p>
+                                    <h3>Volatilité</h3>
+                                    <p className="metric-value">{safeToFixed(volatility)}%</p>
                                 </div>
                                 <div className="metric-card">
-                                    <h3>💸 Total Investi</h3>
+                                    <h3>Total Investi</h3>
                                     <p className="metric-value">{safeToFixed(totalInvestments)}€</p>
                                 </div>
                             </div>
 
                             <div className="strategy-container">
-                                <h3>🧠 Stratégie Recommandée :</h3>
+                                <h3>Stratégie Recommandée</h3>
                                 <p className="strategy-text">
                                     {getInvestmentStrategy()}
                                 </p>
                             </div>
 
                             <div className="investments-list">
-                                <h3>📋 Investissements Actuels</h3>
+                                <h3>Investissements Actuels</h3>
                                 <table className="investment-table">
                                     <thead>
                                     <tr>
@@ -296,25 +301,26 @@ function InvestmentStrategies() {
                                     </thead>
                                     <tbody>
                                     {investments.map((inv, index) => {
-                                        // Calcul du prix actuel pour l'investissement
+                                        // calcul prix actuel pour investissement
                                         const currentPrice = getCurrentPrice(inv.companyName);
 
-                                        // Calcul du rendement moyen de l'investissement (comme dans le code d'origine)
+                                        // Calcul rendement moyen de l'investissement
                                         const relatedProducts = history.filter(product => product.companyName === inv.companyName);
-                                        const totalRendement = relatedProducts.reduce((sum, product) => sum + product.rendement, 0);
-                                        console.log("rendement total: "+totalRendement)
-                                        const averageRendement = relatedProducts.length > 0 ? totalRendement / relatedProducts.length : 0;
+                                        const totalRendement = relatedProducts.reduce((sum,product) => sum+product.rendement, 0);
+                                        //console.log("rendement total: "+totalRendement)
+                                        const averageRendement = relatedProducts.length>0 ? totalRendement / relatedProducts.length: 0;
 
-                                        // Vérifier le type de cryptomonnaie (BTC, ETH, DOGE) et affecter le ratio approprié
+                                        // affecter le ratio approprié
+                                        // NE MARCHE PAS :(
                                         let companyRatio = 0;
                                         if (inv.companyName === "BTC") {
-                                            companyRatio = inv.BTC_ratio_sum; // Utilise la valeur de BTC_ratio_sum pour BTC
+                                            companyRatio = inv.BTC_ratio_sum; // BTC
                                         } else if (inv.companyName === "ETH") {
-                                            companyRatio = inv.ETH_ratio_sum; // Utilise la valeur de ETH_ratio_sum pour ETH
+                                            companyRatio = inv.ETH_ratio_sum; // ETH
                                         } else if (inv.companyName === "DOGE") {
-                                            companyRatio = inv.DOGE_ratio_sum; // Utilise la valeur de DOGE_ratio_sum pour DOGE
+                                            companyRatio = inv.DOGE_ratio_sum; // DOGE
                                         } else {
-                                            companyRatio = averageRendement; // Si aucune des cryptos spécifiées, utilise le calcul moyen
+                                            companyRatio = averageRendement; // calcul moyen
                                         }
 
                                         return (
@@ -364,7 +370,7 @@ function InvestmentStrategies() {
                     )}
                 </div>
             ) : (
-                <p className="login-message">🔑 Connectez-vous pour voir vos investissements.</p>
+                <p className="login-message">Connectez-vous pour voir vos investissements</p>
             )}
         </div>
     );

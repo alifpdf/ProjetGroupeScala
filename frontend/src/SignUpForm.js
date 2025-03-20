@@ -10,7 +10,7 @@ function SignUpForm() {
     const handleSubmit = async (e) => {
         e.preventDefault();
         if (!formData.name || !formData.email || !formData.password) {
-            return setMessage("❌ Veuillez remplir tous les champs.");
+            return setMessage("Veuillez remplir tous les champs");
         }
 
         setLoading(true);
@@ -25,28 +25,28 @@ function SignUpForm() {
             const result = await response.json();
 
             if (result.success) {
-                setMessage("✅ Inscription réussie !");
+                setMessage("Inscription réussie");
                 setFormData({ name: "", email: "", password: "" });
             } else {
-                setMessage(`❌ ${result.message}`);
+                setMessage(`${result.message}`);
             }
         } catch {
-            setMessage("❌ Erreur de connexion au serveur.");
+            setMessage("ERROR: connexion au serveur.");
         }
 
         setLoading(false);
     };
-
+    /*  --- Le Html --- */
     return (
         <div>
-            <h2>📝 Inscription</h2>
+            <h2>Inscription</h2>
             {message && <p>{message}</p>}
 
             <form onSubmit={handleSubmit}>
                 <input type="text" name="name" placeholder="Nom" value={formData.name} onChange={handleChange} />
                 <input type="email" name="email" placeholder="Email" value={formData.email} onChange={handleChange} />
                 <input type="password" name="password" placeholder="Mot de passe" value={formData.password} onChange={handleChange} />
-                <button type="submit" disabled={loading}>{loading ? "⏳ Inscription en cours..." : "S'inscrire"}</button>
+                <button type="submit" disabled={loading}>{loading ? "Inscription en cours.." : "S'inscrire"}</button>
             </form>
         </div>
     );

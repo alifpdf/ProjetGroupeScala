@@ -43,7 +43,7 @@ object AkkaStream {
         if (companyKey.nonEmpty) {
           val oldPrice = BigDecimal(oldInvestments.getOrElse(companyKey, 1.0))
           val newPrice = BigDecimal(updatedInvestments.getOrElse(companyKey, 1.0))
-          val amountInvested = BigDecimal(investment.amountInvested.toString)
+          val amountInvested = BigDecimal(investment.amountInvested.intValue)
 
           // 🔥 Calcul basé sur la quantité d'actions
           val numberOfShares = amountInvested / oldPrice

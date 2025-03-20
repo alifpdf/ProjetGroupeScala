@@ -11,16 +11,14 @@ function LoginForm() {
     const itemsPerPage = 10;
     const [showNotifications, setShowNotifications] = useState(false);
 
-    // 🔹 Gestion du changement de champs
-    const handleChange = (e) => {
-        setFormData({ ...formData, [e.target.name]: e.target.value });
-    };
+    // gestion du changement de champs
+    const handleChange = (e) => {setFormData({ ...formData, [e.target.name]: e.target.value });};
 
-    // 🔹 Gestion de la soumission du formulaire
+    // gestion envoie au formulaire
     const handleSubmit = async (e) => {
         e.preventDefault();
         if (!formData.email || !formData.password) {
-            setMessage("❌ Veuillez remplir tous les champs.");
+            setMessage("Veuillez remplir tous les champs.");
             return;
         }
 
@@ -36,36 +34,34 @@ function LoginForm() {
             if (result.success) {
                 setUser(result.user);
                 localStorage.setItem("user", JSON.stringify(result.user));
-                setMessage("✅ Connexion réussie !");
+                setMessage("Connexion réussie");
+
             } else {
-                setMessage(`❌ ${result.message}`);
+                setMessage(`${result.message}`);
             }
-        } catch {
-            setMessage("❌ Erreur de connexion au serveur.");
-        }
+        } catch {setMessage("Erreur de connexion au serveur.");}
         setLoading(false);
     };
 
-    // 🔹 Gestion de la déconnexion
+    // déconnexion
     const handleLogout = () => {
         localStorage.removeItem("user");
         setUser(null);
     };
 
-    // 📡 Connexion WebSocket et récupération des notifications
+    // connexion WebSocket et récupération des notifications
     useEffect(() => {
         if (user) {
             const ws = new WebSocket("ws://localhost:8080/ws");
 
             ws.onopen = () => {
-                console.log("✅ WebSocket connecté !");
+                // console.log("WebSocket connecté");
                 ws.send(JSON.stringify({ type: "connect", userId: user.id }));
             };
 
             ws.onmessage = (event) => {
                 try {
                     const data = JSON.parse(event.data);
-                    console.log("📩 Message reçu :", data);
 
                     if (data.type === "notification" || data.type === "broadcast") {
                         setNotifications((prev) => [{ id: Date.now(), message: data.message }, ...prev]);
@@ -73,16 +69,16 @@ function LoginForm() {
                         setNotifications((prev) => prev.filter((notif) => notif.id !== data.notificationId));
                     }
                 } catch (error) {
-                    console.error("❌ Erreur lors du parsing JSON :", error);
+                    console.error("ERROR: no parsing JSON :", error);
                 }
             };
 
-            ws.onerror = (error) => console.error("❌ Erreur WebSocket :", error);
-            ws.onclose = () => console.log("❌ WebSocket déconnecté.");
+            ws.onerror = (error) => console.error("ERROR: WebSocket ", error);
+            ws.onclose = () => console.log("WebSocket déconnecté");
 
             setSocket(ws);
 
-            // 📨 Charger les notifications depuis l'API
+            // charger les notifications depuis l'API
             fetch("http://localhost:8080/api/get-notifications", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
@@ -94,13 +90,13 @@ function LoginForm() {
                         setNotifications(data.notifications);
                     }
                 })
-                .catch(err => console.error("❌ Erreur récupération notifications:", err));
+                .catch(err => console.error("ERROR: récupération notifications:", err));
 
             return () => ws.close();
         }
     }, [user]);
 
-    // 🗑️ Supprimer une notification
+    // supprimer une notification
     const handleDeleteNotification = async (notificationId) => {
         try {
             const response = await fetch("http://localhost:8080/api/delete-notification", {
@@ -114,22 +110,22 @@ function LoginForm() {
                 setNotifications(notifications.filter(notif => notif.id !== notificationId));
             }
         } catch (error) {
-            console.error("❌ Erreur suppression notification :", error);
+            console.error("ERROR: suppression notification ", error);
         }
     };
 
-    // 📜 Gestion de la pagination
+    // gestion de la pagination
     const indexOfLastItem = (currentPage + 1) * itemsPerPage;
     const indexOfFirstItem = currentPage * itemsPerPage;
     const currentNotifications = notifications.slice(indexOfFirstItem, indexOfLastItem);
 
     return (
         <div style={{ position: "relative", padding: "20px" }}>
-            <h2>{user ? `🔑 Bienvenue, ${user.name}` : "🔑 Connexion"}</h2>
+            <h2>{user ? `Bienvenue, ${user.name}` : "Connexion"}</h2>
             {message && <p>{message}</p>}
 
             {/* 🔔 Icône de cloche avec badge */}
-            {user && (
+            {user && ( // si connecter
                 <div style={{ position: "absolute", top: 10, right: 10 }}>
                     <button
                         onClick={() => setShowNotifications(!showNotifications)}
@@ -189,7 +185,7 @@ function LoginForm() {
                             {/* Pagination */}
                             <div style={{ display: "flex", justifyContent: "space-between", marginTop: "10px" }}>
                                 <button onClick={() => setCurrentPage(prev => Math.max(prev - 1, 0))} disabled={currentPage === 0}>⬅ Précédent</button>
-                                <button onClick={() => setCurrentPage(prev => (indexOfLastItem < notifications.length ? prev + 1 : prev))} disabled={indexOfLastItem >= notifications.length}>Suivant ➡</button>
+                                <button onClick={() => setCurrentPage(prev => (indexOfLastItem < notifications.length ? prev + 1 : prev))} disabled={indexOfLastItem >= notifications.length}>Suivant</button>
                             </div>
                         </div>
                     )}
@@ -200,12 +196,12 @@ function LoginForm() {
                 <form onSubmit={handleSubmit}>
                     <input type="email" name="email" placeholder="Email" value={formData.email} onChange={handleChange} />
                     <input type="password" name="password" placeholder="Mot de passe" value={formData.password} onChange={handleChange} />
-                    <button type="submit" disabled={loading}>{loading ? "⏳ Connexion..." : "Se connecter"}</button>
+                    <button type="submit" disabled={loading}>{loading ? "Connexion.." : "Se connecter"}</button>
                 </form>
             ) : (
                 <div>
-                    <p>📧 {user.email}</p>
-                    <p>💰 Solde: {user.balance}€</p>
+                    <p>{user.email}</p>
+                    <p>Solde: {user.balance}€</p>
                     <button onClick={handleLogout}>Déconnexion</button>
                 </div>
             )}

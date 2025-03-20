@@ -301,13 +301,22 @@ class WebSocketServer(implicit system: ActorSystem, ec: ExecutionContext) {
               case Success(products) =>
 
                 def computeRatio(company: String, currentPrice: BigDecimal): BigDecimal = {
-                  val companyProducts = products.filter(_.entreprise == company)
+                  if (currentPrice == 0) BigDecimal(0)
+                  else {
+                    val companyProducts = products.filter(_.entreprise == company)
 
-                  if (companyProducts.nonEmpty) {
-                    val totalRendement = companyProducts.map(p => ((currentPrice - p.originalPrice) / p.originalPrice) * 100).sum
-                    totalRendement / companyProducts.length // 🔥 Division par le nombre d'investissements pour avoir la moyenne
-                  } else {
-                    BigDecimal(0) // ⚠️ Évite une division par 0 si aucun investissement
+                    if (companyProducts.isEmpty) BigDecimal(0)
+                    else {
+                      // Rendement moyen pondéré sur tous les produits de l'entreprise
+                      val totalRatio = companyProducts.map { p =>
+                        ((currentPrice - p.originalPrice) / p.originalPrice) * 100
+                      }.sum
+
+                      // Optionnel : Si tu veux la moyenne du rendement par produit
+                      val averageRatio = totalRatio / companyProducts.size
+
+                      averageRatio.setScale(2, BigDecimal.RoundingMode.HALF_UP) // Pour arrondir proprement
+                    }
                   }
                 }
 

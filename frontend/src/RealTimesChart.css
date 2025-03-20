@@ -1,4 +1,3 @@
-/* RealTimeChart.css */
 :root {
     --primary-color: #1e3a8a;
     --secondary-color: #3b82f6;
@@ -14,7 +13,6 @@
     --doge-color: #FFCE56;
 }
 
-/* Styles pour le conteneur principal sans affecter les graphiques Chart.js */
 .chart-main-container {
     font-family: 'Roboto', 'Segoe UI', sans-serif;
     max-width: 1200px;
@@ -26,7 +24,6 @@
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
 }
 
-/* Styles d'en-tête qui n'affectent pas les graphiques */
 .chart-title {
     text-align: center;
     font-size: 1.8rem;
@@ -42,7 +39,6 @@
     color: var(--primary-color);
 }
 
-/* Cartes pour afficher les valeurs crypto */
 .crypto-values-grid {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
@@ -81,7 +77,6 @@
     color: var(--doge-color);
 }
 
-/* Conteneur de graphique qui n'interfère pas avec Chart.js */
 .chart-outer-container {
     background-color: var(--card-background);
     padding: 20px;
@@ -90,14 +85,12 @@
     margin: 0 auto 30px;
 }
 
-/* Pour préserver les dimensions du graphique */
 .chart-inner-container {
     position: relative;
     width: 100%;
     height: 100%;
 }
 
-/* Section des ratios */
 .ratios-grid {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
@@ -119,7 +112,6 @@
     margin: 10px 0;
 }
 
-/* Section compte utilisateur */
 .user-account-section {
     background-color: var(--card-background);
     padding: 20px;
@@ -136,7 +128,6 @@
     margin-bottom: 20px;
 }
 
-/* Formulaire d'investissement */
 .investment-controls {
     display: flex;
     justify-content: center;
@@ -177,7 +168,6 @@
     background-color: var(--primary-color);
 }
 
-/* Vue des investissements */
 .investments-display {
     display: flex;
     justify-content: space-around;
@@ -227,7 +217,6 @@
     background-color: #dc2626;
 }
 
-/* Conteneur graphique en camembert */
 .pie-chart-outer-container {
     background-color: var(--card-background);
     padding: 20px;
@@ -237,7 +226,6 @@
     min-width: 300px;
 }
 
-/* Message de connexion */
 .login-prompt {
     text-align: center;
     font-size: 1.2rem;
@@ -247,7 +235,6 @@
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
 }
 
-/* Styles responsive */
 @media (max-width: 768px) {
     .crypto-values-grid,
     .ratios-grid {

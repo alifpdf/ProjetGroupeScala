@@ -13,7 +13,7 @@ object MarketstackDataFetcher {
   implicit val system: ActorSystem = ActorSystem("MarketstackDataFetcher")
   implicit val ec: ExecutionContext = system.dispatcher
 
-  val apiKey = "09a5355c357bc1e9b85c6a90ae687786"
+  val apiKey = "8717ecfc3c4fff52643a4e0e9ad08873"
   val baseUrl = "http://api.marketstack.com/v1"
 
   // Fonction pour récupérer les 6 dernières données de marché pour un symbole
@@ -31,21 +31,29 @@ object MarketstackDataFetcher {
       println(s"JSON Response: $json") // Debug output
 
       val data = (json \ "data").asOpt[JsArray]
+      val multiplier = symbol match {
+        case "BTC" => 10000
+        case "ETH" => 1000
+        case _     => 1
+      }
+
       data match {
         case Some(arr) if arr.value.nonEmpty =>
           val sortedPrices = arr.value.map { item =>
             val date = (item \ "date").as[String]
-            val close = (item \ "close").asOpt[Double].getOrElse(1930.0) //*(1.09/ 10) // Default to 0.5 if missing
+            val close = (item \ "close").asOpt[Double].getOrElse(0.5) * (1.09 / 10)
             (date, close)
-          }.sortBy(_._1).map(_._2).toList
+          }.sortBy(_._1).map(_._2 * multiplier).toList
 
           sortedPrices.take(6)
+
         case _ =>
           println(s"No data found for symbol: $symbol, initializing with default values.")
-          List.fill(6)(1930.0)
+          List.fill(6)(0.5 * multiplier)
       }
     }
   }
+
 
 
   // Exemple d'appel pour récupérer les 6 dernières données de marché pour un symbole
