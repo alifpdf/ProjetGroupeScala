@@ -64,11 +64,7 @@ object OkxAPI {
     getPrice("BTC").map { price =>
       val adjustedPrice = price / 1.09
       println(s"Prix actuel de BTC-USD : $adjustedPrice EUR USDT")
-    }.recover {
-      case ex: Exception => println(s"Erreur lors de la récupération du prix de BTC : ${ex.getMessage}")
     }
-
-    Thread.sleep(5000)
     system.terminate()
   }
 }

@@ -11,10 +11,10 @@
   import play.api.libs.json._
 
   import scala.concurrent.{ExecutionContext, Future}
-  import scala.util.{Failure, Success}
+  import scala.util.{Success}
 
-  // 🔥 Augmente le délai d'attente pour éviter les erreurs
 
+  // Augmente le délai d'attente pour éviter les erreurs
   case class InformerVolatile(userId: Int, strategy: String) // Changer 'message' par 'strategy'
   object InformerVolatile {
     implicit val format: OFormat[InformerVolatile] = Json.format[InformerVolatile]
@@ -41,28 +41,28 @@
     val route: Route = cors() {
       concat(
         pathEndOrSingleSlash {
-          complete(StatusCodes.OK, "✅ Serveur WebSocket en cours d'exécution. Connectez-vous sur /ws")
+          complete(StatusCodes.OK)
         },
         // 📡 Gestion du WebSocket
         path("ws") {
           handleWebSocketMessages(websocketFlow())
         },
 
-        // ✅ Récupérer une somme investie
+        // Récupérer une somme investie
         path("api" / "recuperer-somme") {
           post {
             entity(as[String]) { body =>
               Json.parse(body).validate[RecupererSommeRequest] match {
-                case JsSuccess(request, _) =>
-                  println(s"✅ Récupération de ${request.sommeInvesti}€ de ${request.companyName} (user: ${request.userId})")
+                case JsSuccess(request,_) =>
+                  println(s" Récupération de ${request.sommeInvesti}€ de ${request.companyName} (user: ${request.userId})")
 
-                  notificationActor ! SocketActor.SendNotification(request.userId,s"✅ Récupération de ${request.sommeInvesti}€ de ${request.companyName} (user: ${request.userId})")
+                  notificationActor ! SocketActor.SendNotification(request.userId,s" Récupération de ${request.sommeInvesti}€ de ${request.companyName} (user: ${request.userId})")
 
                   val futureRecuperation = (utilisateurActor2 ? InvestmentActor.RecupererlaSomme(request.companyName, request.userId, request.sommeInvesti)).mapTo[String]
 
                   onComplete(futureRecuperation) {
                     case Success(response) =>
-                      updateFrontend(request.userId) // 🔥 Met à jour le solde et les investissements
+                      updateFrontend(request.userId) // Met à jour le solde et les investissements
                       complete(Json.obj("success" -> true, "message" -> response).toString())
 
 
@@ -72,7 +72,7 @@
           }
         },
 
-        // ✅ Ajouter un utilisateur
+        //  Ajouter un utilisateur
         path("api" / "add-user") {
           post {
             entity(as[String]) { body =>
@@ -81,7 +81,7 @@
                   val futureResponse: Future[String] = (utilisateurActor ? UtilisateurActor.AddUtilisateur(request.name, request.email, request.password, 0)).mapTo[String]
                   complete(
                     futureResponse.map(response =>
-                      Json.obj("success" -> !response.startsWith("❌"), "message" -> response).toString()
+                      Json.obj("success" -> !response.startsWith("erreur"), "message" -> response).toString()
                     )
                   )
               }
@@ -89,7 +89,7 @@
           }
         },
 
-        // ✅ Connexion utilisateur
+        //  Connexion utilisateur
         path("api" / "login") {
           post {
             entity(as[String]) { body =>
@@ -98,7 +98,7 @@
                   val futureResponse: Future[String] = (utilisateurActor ? UtilisateurActor.connexion(request.email, request.password)).mapTo[String]
                   complete(
                     futureResponse.map(response =>
-                      Json.obj("success" -> !response.startsWith("❌"), "user" -> Json.parse(response)).toString()
+                      Json.obj("success" -> !response.startsWith("ereur"), "user" -> Json.parse(response)).toString()
                     )
                   )
               }
@@ -106,7 +106,7 @@
           }
         },
 
-        // ✅ Récupération des notifications
+        // Récupération des notifications
         path("api" / "get-notifications") {
           post {
             entity(as[String]) { body =>
@@ -124,52 +124,60 @@
           }
         },
 
-        // ✅ Investir
+        // Investir
         path("api" / "investir") {
           post {
             entity(as[String]) { body =>
               val json = Json.parse(body)
+
+              // Extraction des paramètres JSON
               val userId = (json \ "userId").as[Int]
               val companyName = (json \ "companyName").as[String]
               val amount = (json \ "amount").as[BigDecimal]
               val numShares = (json \ "numShares").as[Int]
 
-              println(s"📢 Investissement : Utilisateur $userId achète $numShares actions de $companyName pour $amount €")
+              println(s" Investissement reçu : Utilisateur $userId achète $numShares actions de $companyName pour $amount €")
 
-              notificationActor ! SocketActor.SendNotification(userId, s"📢 Investissement : Utilisateur $userId achète $numShares actions de $companyName pour $amount €")
+              // Envoi d'une notification en temps réel (WebSocket)
+              notificationActor ! SocketActor.SendNotification(
+                userId,
+                s"Investissement : $numShares actions de $companyName pour $amount €"
+              )
 
-              val futureInvestment = (utilisateurActor2 ? InvestmentActor.AddInvestment(userId, companyName, amount * numShares, amount)).mapTo[String]
+              val futureResponse = for {
+                investResponse <- (utilisateurActor2 ? InvestmentActor.AddInvestment(
+                  userId, companyName, amount * numShares, amount
+                )).mapTo[Int]
 
-              onComplete(futureInvestment.flatMap { response =>
-                println(s"✅ Réponse investissement : $response")
+                _ = println(s"Réponse investissement : $investResponse")
 
-                // 🔎 Extraction de l'ID de l'investissement depuis la réponse
-                val investmentIdOpt = "ID: (\\d+)".r.findFirstMatchIn(response).map(_.group(1).toInt)
+                // Extraction directe de l'ID sans sécurité
+                investmentId = investResponse
 
-                investmentIdOpt match {
-                  case Some(investmentId) =>
-                    // ✅ Ajouter le produit
-                    (productsActor ? ProductsActor.AddProduct(userId, investmentId, amount,companyName)).mapTo[String].map { productResponse =>
-                      println(s"✅ Produit ajouté : $productResponse")
-                      Json.obj("success" -> true, "message" -> response, "product" -> productResponse).toString()
-                    }
+                productResponse <- (productsActor ? ProductsActor.AddProduct(
+                  userId, investmentId, amount, companyName, numShares
+                )).mapTo[String]
 
-                  case None =>
-                    println("❌ Impossible de récupérer l'ID de l'investissement depuis la réponse")
-                    Future.successful(Json.obj("success" -> false, "message" -> "Erreur : ID de l'investissement introuvable").toString())
-                }
-              }) {
+              } yield {
+                Json.obj(
+                  "success" -> true,
+                ).toString()
+              }
+
+
+              // Gestion centralisée du succès ou de l'échec
+              onComplete(futureResponse) {
                 case Success(result) =>
-                  updateFrontend(userId) // 🔥 Met à jour le solde et les investissements
+                  updateFrontend(userId) // Mise à jour frontend (solde, investissements)
                   complete(HttpEntity(ContentTypes.`application/json`, result))
 
-                case Failure(exception) =>
-                  println(s"❌ Erreur globale lors de l'investissement : ${exception.getMessage}")
-                  complete(HttpEntity(ContentTypes.`application/json`, Json.obj("success" -> false, "message" -> "Erreur lors de l'investissement").toString()))
+
               }
+
             }
           }
         }
+
         ,
         path("api" / "get-balance") {
           post {
@@ -180,10 +188,7 @@
               onComplete(futureBalance) {
                 case Success(balance) =>
                   complete(Json.obj("success" -> true, "balance" -> balance).toString())
-                case Failure(exception) =>
-                  println(s"❌ Erreur lors de la récupération du solde : ${exception.getMessage}")
-                  complete(Json.obj("success" -> false, "message" -> "Erreur lors de la récupération du solde").toString())
-              }
+                }
             }
           }
         },
@@ -194,7 +199,7 @@
               Json.parse(body).validate[InformerVolatile] match {
                 case JsSuccess(request, _) =>
                   // Log de la notification envoyée
-                  println(s"📢 Notification envoyée : ${request.strategy} à l'utilisateur ${request.userId}")
+                  println(s"Notification envoyée : ${request.strategy} à l'utilisateur ${request.userId}")
 
                   // Envoi de la notification via l'acteur notificationActor
                   val futureResponse: Future[String] = (notificationActor ? SocketActor.SendNotification(request.userId, request.strategy)).mapTo[String]
@@ -203,21 +208,9 @@
                   onComplete(futureResponse) {
                     case Success(response) =>
                       complete(HttpEntity(ContentTypes.`application/json`, Json.obj("success" -> true, "message" -> response).toString()))
-                    case Failure(exception) =>
-                      // En cas d'erreur dans l'envoi de la notification
-                      println(s"❌ Erreur lors de l'envoi de la notification : ${exception.getMessage}")
-                      complete(HttpEntity(ContentTypes.`application/json`, Json.obj("success" -> false, "message" -> "Erreur lors de la notification").toString()))
-                  }
+                    }
 
-                case JsError(errors) =>
-                  // Gestion des erreurs lors du parsing
-                  val errorMessage = s"❌ Erreur lors du parsing de la notification : ${errors.mkString(", ")}"
-                  println(errorMessage)
 
-                  // Réponse en cas d'erreur de parsing
-                  complete(HttpEntity(ContentTypes.`application/json`,
-                    Json.obj("success" -> false, "message" -> "Erreur lors de la notification").toString())
-                  )
               }
             }
           }
@@ -238,12 +231,6 @@
                     "investments" -> Json.toJson(investments)
                   ).toString()))
 
-                case Failure(exception) =>
-                  println(s"❌ Erreur lors de la récupération des investissements : ${exception.getMessage}")
-                  complete(HttpEntity(ContentTypes.`application/json`, Json.obj(
-                    "success" -> false,
-                    "message" -> "Erreur lors de la récupération des investissements"
-                  ).toString()))
               }
             }
           }
@@ -267,9 +254,6 @@
             }
           }
         },
-        // ✅ Calcul personnalisé : ((invest1 + additionalAmount)/additionalAmount + (invest2 + additionalAmount)/additionalAmount) par action
-        // ✅ Calcul personnalisé avec récupération des prix actuels (prix reçus du frontend)
-        // ✅ Calcul personnalisé sécurisé même si l'utilisateur n'a pas investi dans toutes les actions
         path("api" / "calculate-sum") {
           post {
             entity(as[String]) { body =>
@@ -288,7 +272,17 @@
                     if (currentPrice == 0) BigDecimal(0)
                     else {
                       val companyProducts = products.filter(_.entreprise == company)
-                      companyProducts.map(p => (p.originalPrice + currentPrice) / currentPrice).sum
+
+                      if (companyProducts.isEmpty) BigDecimal(0)
+                      else {
+                        // Rendement moyen pondéré sur tous les produits de l'entreprise
+                        val totalRatio = companyProducts.map { p =>
+                          ((currentPrice - p.originalPrice/p.numshare) / (p.originalPrice/p.numshare)) * 100
+                        }.sum
+                        val averageRatio = totalRatio/companyProducts.size
+
+                        averageRatio
+                      }
                     }
                   }
 
@@ -296,39 +290,28 @@
                   val ethTotal = computeRatio("ETH", ethPrice)
                   val dogeTotal = computeRatio("DOGE", dogePrice)
 
-                  println(s"✅ Calcul terminé - BTC: $btcTotal, ETH: $ethTotal, DOGE: $dogeTotal")
+                  println(s"Calcul terminé - BTC: $btcTotal%, ETH: $ethTotal%, DOGE: $dogeTotal%")
 
-                  complete(HttpEntity(ContentTypes.`application/json`, Json.obj(
+                  val responseJson = Json.obj(
                     "success" -> true,
                     "userId" -> userId,
                     "BTC_ratio_sum" -> btcTotal,
                     "ETH_ratio_sum" -> ethTotal,
                     "DOGE_ratio_sum" -> dogeTotal
-                  ).toString()))
+                  )
 
-                case Failure(exception) =>
-                  println(s"❌ Erreur lors de la récupération des produits : ${exception.getMessage}")
-                  complete(HttpEntity(ContentTypes.`application/json`, Json.obj(
-                    "success" -> false,
-                    "message" -> "Erreur lors du calcul des ratios"
-                  ).toString()))
-              }
+                  complete(StatusCodes.OK, HttpEntity(ContentTypes.`application/json`, responseJson.toString()))
+
+                }
             }
           }
         }
-
-
-
-
-
-
-
       )
     }
 
-    // 🔥 Fonction pour envoyer une mise à jour automatique au frontend
+    //Fonction pour envoyer une mise à jour automatique au frontend
     def updateFrontend(userId: Int): Unit = {
-      println(s"🔄 Mise à jour du solde et des investissements pour l'utilisateur $userId")
+      println(s"Mise à jour du solde et des investissements pour l'utilisateur $userId")
 
       // Effectuer les appels pour obtenir les investissements et la balance
       val futureInvestments = (utilisateurActor2 ? InvestmentActor.GetInvestments(userId)).mapTo[Seq[Investment]]
@@ -348,13 +331,11 @@
         ).toString()
 
 
-        println(s"✅ Envoi de la mise à jour au frontend : $updateMessage")
+        println(s" Envoi de la mise à jour au frontend : $updateMessage")
       }
     }
 
-
     def start(): Unit = {
       Http().newServerAt("localhost", 8080).bind(route)
-      println("✅ Serveur WebSocket en écoute sur ws://localhost:8080/ws et API REST sur /api/recuperer-somme")
     }
   }

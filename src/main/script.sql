@@ -37,16 +37,15 @@ CREATE TABLE products (
                           investment_id INT NOT NULL REFERENCES investments(id) ON DELETE CASCADE,
                           created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                           original_price NUMERIC(10,2) NOT NULL,
-                          entreprise VARCHAR(150)  NOT NULL
+                          entreprise VARCHAR(150)  NOT NULL,
+                          numshare INT NOT NULL
 );
 
 -- Insertion d'un utilisateur avec un solde initial
 INSERT INTO users (name, email, password, balance)
-VALUES ('Alice', 'alice@example.com', 'password123', 100.00);
+VALUES ('Alice', 'alice@example.com', 'password123', 1000000.00);
 
--- Insertion d'un investissement pour Alice
-INSERT INTO investments (user_id, company_name, amount_invested,original_price)
-VALUES ((SELECT id FROM users WHERE email = 'alice@example.com'), 'TechCorp', 50.00,8);
+--
 -- Insertion d'une notification pour l'utilisateur avec ID 1
 INSERT INTO notifications (user_id, message)
 VALUES (1, 'Bienvenue sur notre plateforme ! Votre compte a été créé avec succès.');

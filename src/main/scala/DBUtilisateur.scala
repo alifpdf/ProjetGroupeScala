@@ -9,7 +9,7 @@
   import play.api.libs.json._
   object User {
     implicit val userFormat: OFormat[User] = Json.format[User]
-    val tupled = (User.apply _).tupled // ✅ Ajout de tupled explicitement
+    val tupled = (User.apply _).tupled // Ajout de tupled explicitement
   }
 
   case class User(id: Option[Int] = None, name: String, email: String, motdepasse: String, balance: BigDecimal)
@@ -32,26 +32,24 @@
 
   class DBUtilisateur(db:Database) {
 
-    // ✅ Récupère tous les utilisateurs
+
     def getUsers: Future[Seq[User]] = {
       db.run(table.result)
     }
     def getAllUsers: Future[String] = {
       db.run(table.result).map { users =>
-        val json = Json.toJson(users) // ✅ Convertit en JSON
-        println("📌 JSON des utilisateurs :", json) // Debug
-        Json.stringify(json) // ✅ Convertit en String
+        val json = Json.toJson(users) //
+        println(" JSON des utilisateurs :", json) // Debug
+        Json.stringify(json)
       }
     }
 
 
 
-
-
     def addUser(user: User): Future[Int] = {
-      println(s"📌 Tentative d'insertion de : ${user}")
+      println(s"Tentative d'insertion de : ${user}")
       db.run(UsersTable.table += user).map { result =>
-        println(s"✅ Nombre de lignes insérées : $result")
+        println(s" Nombre de lignes insérées : $result")
         result
       }
     }
@@ -91,7 +89,7 @@
 
 
     def updateSommeCompte(somme: BigDecimal, id: Int): Future[Int] = {
-      println(s"🔄 [DB] Mise à jour du solde de l'utilisateur $id de +$somme")
+      println(s" Mise à jour du solde de l'utilisateur $id de +$somme")
 
       val query = UsersTable.table
         .filter(_.id === id)
@@ -100,9 +98,9 @@
 
       db.run(query).map { rowsUpdated =>
         if (rowsUpdated > 0) {
-          println(s"✅ [DB] Solde mis à jour pour User ID: $id (Nouveau solde: $somme)")
+          println(s" [DB] Solde mis à jour pour User ID: $id (Nouveau solde: $somme)")
         } else {
-          println(s"⚠️ [DB] Aucun utilisateur trouvé avec ID: $id")
+          println(s" [DB] Aucun utilisateur trouvé avec ID: $id")
         }
         rowsUpdated
       }

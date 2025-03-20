@@ -35,10 +35,10 @@ class UtilisateurActor(dbService: DBUtilisateur) extends Actor {
 
     case GetUsers =>
       val replyTo = sender() // Capture du sender() avant l'opération asynchrone
-      println("🔍 [UtilisateurActor] Requête reçue : GetUsers") // DEBUG
+      println("UtilisateurActor: Requête reçue : GetUsers") // DEBUG
       dbService.getUsers.onComplete {
         case Success(users) =>
-          println(s"✅ [UtilisateurActor] Réponse envoyée : ${users.size} utilisateurs")
+          println(s"UtilisateurActor: Réponse envoyée : ${users.size} utilisateurs")
           replyTo ! users
       }
 
@@ -46,7 +46,7 @@ class UtilisateurActor(dbService: DBUtilisateur) extends Actor {
       val originalSender = sender()
       dbService.getAllUsers.onComplete {
         case Success(jsonString) =>
-          println(s"📌 JSON récupéré depuis la base de données : $jsonString") // Debugging
+          println(s"JSON récupéré depuis la base de données : $jsonString") // Debugging
           originalSender ! jsonString
       }
 
@@ -72,7 +72,7 @@ class UtilisateurActor(dbService: DBUtilisateur) extends Actor {
       val senderRef = sender()
       val user = User(None,name, email, password, balance)
 
-      dbService.addUser(user).map(_ => s"✅ Utilisateur $name ajouté avec succès.").pipeTo(senderRef)
+      dbService.addUser(user).map(_ => s"Utilisateur $name ajouté avec succès.").pipeTo(senderRef)
 
 
 
@@ -89,7 +89,7 @@ class UtilisateurActor(dbService: DBUtilisateur) extends Actor {
 
     case GetBalance1(userId) =>
       val senderRef = sender()
-      println(s"📢 Récupération du solde utilisateur ID: $userId")
+      println(s"Récupération du solde utilisateur ID: $userId")
 
       dbService.getsomme_restant1(userId).pipeTo(senderRef)
 
@@ -104,21 +104,21 @@ class UtilisateurActor(dbService: DBUtilisateur) extends Actor {
     case connexion(email, password) =>
       val senderRef = sender()
 
-      // ✅ Gestion avec un `for-comprehension`
+      //Gestion avec un `for-comprehension`
       val result = for {
         // Étape 1 : Vérifier le mot de passe
         passwordValid <- (utilisateurActor ? UtilisateurActor.VerifierPassword(email, password)).mapTo[Boolean]
         _ = if (!passwordValid) {
-          println(s"❌ [Connexion] Mot de passe incorrect pour $email")
-          senderRef ! "❌ Mot de passe incorrect"
-          throw new Exception("Mot de passe incorrect") // 🔥 Arrête l'exécution immédiatement
+          println(s"[Connexion] Mot de passe incorrect pour $email")
+          senderRef ! "Mot de passe incorrect"
+          throw new Exception("Mot de passe incorrect") //  Arrête l'exécution immédiatement
         }
 
         // Étape 2 : Récupérer l'ID de l'utilisateur
         userId <- (utilisateurActor ? UtilisateurActor.GetId(email)).mapTo[Int]
         _ = if (userId <= 0) {
-          println(s"❌ [Connexion] Aucun utilisateur trouvé pour $email")
-          senderRef ! "❌ Utilisateur non trouvé"
+          println(s"[Connexion] Aucun utilisateur trouvé pour $email")
+          senderRef ! " Utilisateur non trouvé"
           throw new Exception("Utilisateur non trouvé")
         }
 
@@ -135,12 +135,12 @@ class UtilisateurActor(dbService: DBUtilisateur) extends Actor {
               "balance" -> user.balance
             ).toString()
 
-            println(s"✅ [Connexion] Utilisateur trouvé : $userJson")
+            println(s"[Connexion] Utilisateur trouvé : $userJson")
             senderRef ! userJson
 
           case None =>
-            println(s"❌ [Connexion] Erreur : Utilisateur $userId introuvable")
-            senderRef ! "❌ Utilisateur introuvable"
+            println(s" [Connexion] Erreur : Utilisateur $userId introuvable")
+            senderRef ! "Utilisateur introuvable"
         }
       }
 
