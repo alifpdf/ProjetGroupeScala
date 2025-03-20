@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import "./RealTimesChart.css";
 import { Line, Pie, Bar } from "react-chartjs-2";
 import {
     Chart as ChartJS,
@@ -285,114 +286,141 @@ function RealTimeChart() {
     };
 
     return (
-        <div style={{ textAlign: "center", marginTop: "50px" }}>
-            <h2>📈 Valeurs en temps réel</h2>
-            <p>BTC: {numberBTC}€</p>
-            <p>ETH: {numberETH}€</p>
-            <p>DOGE: {numberDOGE}€</p>
-
-            <div style={{ width: "700px", margin: "auto" }}>
-                <h2>📊 Graphique en Temps Réel</h2>
-                <Line
-                    data={{
-                        labels,
-                        datasets: [
-                            { label: "BTC", data: dataBTC, borderColor: "blue", fill: false },
-                            { label: "ETH", data: dataETH, borderColor: "red", fill: false },
-                            { label: "DOGE", data: dataDOGE, borderColor: "green", fill: false }
-                        ]
-                    }}
-                />
+        <div className="chart-main-container">
+            <h2 className="chart-title">📈 Valeurs en temps réel</h2>
+            <div className="crypto-values-grid">
+                <div className="crypto-value-card">
+                    <p className="crypto-value-text btc-text">BTC: {numberBTC}€</p>
+                </div>
+                <div className="crypto-value-card">
+                    <p className="crypto-value-text eth-text">ETH: {numberETH}€</p>
+                </div>
+                <div className="crypto-value-card">
+                    <p className="crypto-value-text doge-text">DOGE: {numberDOGE}€</p>
+                </div>
             </div>
 
-            <div style={{ marginTop: "20px" }}>
-                <h2>📈 Ratios Calculés (Auto)</h2>
-                <p>BTC Ratio: {ratios.BTC}</p>
-                <p>ETH Ratio: {ratios.ETH}</p>
-                <p>DOGE Ratio: {ratios.DOGE}</p>
+            <div className="chart-outer-container chart-width-limiter" style={{ width: "700px", margin: "auto" }}>
+                <h2 className="chart-title">📊 Graphique en Temps Réel</h2>
+                <div className="chart-inner-container">
+                    <Line
+                        data={{
+                            labels,
+                            datasets: [
+                                { label: "BTC", data: dataBTC, borderColor: "blue", fill: false },
+                                { label: "ETH", data: dataETH, borderColor: "red", fill: false },
+                                { label: "DOGE", data: dataDOGE, borderColor: "green", fill: false }
+                            ]
+                        }}
+                    />
+                </div>
             </div>
-            <div style={{ width: "600px", margin: "20px auto" }}>
-                <h2>📊 Visualisation des Ratios</h2>
-                <Bar
-                    data={{
-                        labels: ["BTC", "ETH", "DOGE"],
-                        datasets: [
-                            {
-                                label: "Ratios Calculés",
-                                data: [ratios.BTC, ratios.ETH, ratios.DOGE],
-                                backgroundColor: ["#FF6384", "#36A2EB", "#FFCE56"],
-                                borderRadius: 5,
+
+            <div>
+                <h2 className="chart-title">📈 Ratios Calculés (Auto)</h2>
+                <div className="ratios-grid">
+                    <div className="ratio-value-card">
+                        <p className="ratio-value-text btc-text">BTC Ratio: {ratios.BTC}</p>
+                    </div>
+                    <div className="ratio-value-card">
+                        <p className="ratio-value-text eth-text">ETH Ratio: {ratios.ETH}</p>
+                    </div>
+                    <div className="ratio-value-card">
+                        <p className="ratio-value-text doge-text">DOGE Ratio: {ratios.DOGE}</p>
+                    </div>
+                </div>
+            </div>
+
+            <div className="chart-outer-container chart-width-limiter" style={{ width: "600px", margin: "20px auto" }}>
+                <h2 className="chart-title">📊 Visualisation des Ratios</h2>
+                <div className="chart-inner-container">
+                    <Bar
+                        data={{
+                            labels: ["BTC", "ETH", "DOGE"],
+                            datasets: [
+                                {
+                                    label: "Ratios Calculés",
+                                    data: [ratios.BTC, ratios.ETH, ratios.DOGE],
+                                    backgroundColor: ["#FF6384", "#36A2EB", "#FFCE56"],
+                                    borderRadius: 5,
+                                },
+                            ],
+                        }}
+                        options={{
+                            responsive: true,
+                            plugins: {
+                                legend: { display: false },
+                                tooltip: { enabled: true }
                             },
-                        ],
-                    }}
-                    options={{
-                        responsive: true,
-                        plugins: {
-                            legend: { display: false },
-                            tooltip: { enabled: true }
-                        },
-                        scales: {
-                            y: {
-                                beginAtZero: true
+                            scales: {
+                                y: {
+                                    beginAtZero: true
+                                }
                             }
-                        }
-                    }}
-                />
+                        }}
+                    />
+                </div>
             </div>
-
-
 
             {user ? (
-                <>
-                    <h3>💰 Solde : {lockedBalance !== null ? `${lockedBalance}€` : "Chargement..."}</h3>
+                <div className="user-account-section">
+                    <div className="user-balance-display">
+                        <h3 className="chart-subtitle">💰 Solde : {lockedBalance !== null ? `${lockedBalance}€` : "Chargement..."}</h3>
+                    </div>
 
-                    <h2>💰 Investir dans une action</h2>
-                    <select value={selectedCompany} onChange={(e) => setSelectedCompany(e.target.value)}>
-                        <option value="BTC">BTC</option>
-                        <option value="ETH">ETH</option>
-                        <option value="DOGE">DOGE</option>
-                    </select>
-                    <input type="number" min="1" value={numShares} onChange={(e) => setNumShares(parseInt(e.target.value) || 1)} />
-                    <button onClick={investir}>Investir</button>
+                    <h2 className="chart-title">💰 Investir dans une action</h2>
+                    <div className="investment-controls">
+                        <select className="investment-select" value={selectedCompany} onChange={(e) => setSelectedCompany(e.target.value)}>
+                            <option value="BTC">BTC</option>
+                            <option value="ETH">ETH</option>
+                            <option value="DOGE">DOGE</option>
+                        </select>
+                        <input className="investment-input" type="number" min="1" value={numShares} onChange={(e) => setNumShares(parseInt(e.target.value) || 1)} />
+                        <button className="investment-button" onClick={investir}>Investir</button>
+                    </div>
 
-                    <div style={{ display: "flex", justifyContent: "space-around", marginTop: "20px" }}>
-                        <ul style={{ listStyleType: "none", padding: 0 }}>
-                            {investments.map((inv, index) => (
-                                <li key={inv.id || index} style={{ marginBottom: "10px" }}>
-                                    {inv.companyName} - 💰 {inv.amountInvested}€ - {inv.originalPrice}
-                                    <button onClick={() => recupererSomme(inv.companyName, inv.userId, inv.amountInvested)} style={{ marginLeft: "10px", backgroundColor: "red", color: "white", borderRadius: "5px" }}>
-                                        Récupérer
-                                    </button>
-                                </li>
-                            ))}
-                        </ul>
-                        <div style={{ width: "300px", height: "300px" }}>
-                            <h2>🍰 Répartition des Investissements</h2>
-                            <Pie data={investmentData} options={{
-                                plugins: {
-                                    tooltip: {
-                                        callbacks: {
-                                            label: function (tooltipItem) {
-                                                const label = tooltipItem.label || '';
-                                                const value = tooltipItem.raw || 0;
-                                                const total = tooltipItem.dataset.data.reduce((acc, val) => acc + val, 0);
-                                                const percentage = ((value / total) * 100).toFixed(2);
-                                                return `${label}: ${value}€ (${percentage}%)`;
+                    <div className="investments-display">
+                        <div className="investments-list-container">
+                            <ul>
+                                {investments.map((inv, index) => (
+                                    <li className="investment-item" key={inv.id || index}>
+                                        <span>{inv.companyName} - 💰 {inv.amountInvested}€ - {inv.originalPrice}</span>
+                                        <button className="recover-button" onClick={() => recupererSomme(inv.companyName, inv.userId, inv.amountInvesti)}>
+                                            Récupérer
+                                        </button>
+                                    </li>
+                                ))}
+                            </ul>
+                        </div>
+                        <div className="pie-chart-outer-container">
+                            <h2 className="chart-title">🍰 Répartition des Investissements</h2>
+                            <div className="chart-inner-container">
+                                <Pie data={investmentData} options={{
+                                    plugins: {
+                                        tooltip: {
+                                            callbacks: {
+                                                label: function (tooltipItem) {
+                                                    const label = tooltipItem.label || '';
+                                                    const value = tooltipItem.raw || 0;
+                                                    const total = tooltipItem.dataset.data.reduce((acc, val) => acc + val, 0);
+                                                    const percentage = ((value / total) * 100).toFixed(2);
+                                                    return `${label}: ${value}€ (${percentage}%)`;
+                                                }
                                             }
+                                        },
+                                        legend: {
+                                            display: true,
+                                            position: 'bottom'
                                         }
-                                    },
-                                    legend: {
-                                        display: true,
-                                        position: 'bottom'
                                     }
-                                }
-                            }} />
+                                }} />
+                            </div>
                         </div>
                     </div>
-                </>
+                </div>
             ) : (
-                <div>
-                    <h3>Veuillez vous connecter pour voir votre solde et vos investissements.</h3>
+                <div className="login-prompt">
+                    <h3 className="chart-subtitle">Veuillez vous connecter pour voir votre solde et vos investissements.</h3>
                 </div>
             )}
         </div>

@@ -1,4 +1,4 @@
-/* InvestmentStyles.css */
+/* RealTimeChart.css */
 :root {
     --primary-color: #1e3a8a;
     --secondary-color: #3b82f6;
@@ -9,9 +9,13 @@
     --border-color: #e2e8f0;
     --positive-color: #10b981;
     --negative-color: #ef4444;
+    --btc-color: #FF6384;
+    --eth-color: #36A2EB;
+    --doge-color: #FFCE56;
 }
 
-.investment-container {
+/* Styles pour le conteneur principal sans affecter les graphiques Chart.js */
+.chart-main-container {
     font-family: 'Roboto', 'Segoe UI', sans-serif;
     max-width: 1200px;
     margin: 0 auto;
@@ -22,80 +26,101 @@
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
 }
 
-.investment-header {
+/* Styles d'en-tête qui n'affectent pas les graphiques */
+.chart-title {
     text-align: center;
-    font-size: 2rem;
-    margin-bottom: 30px;
+    font-size: 1.8rem;
+    margin-bottom: 20px;
     color: var(--primary-color);
     font-weight: 700;
 }
 
-.investment-dashboard {
-    display: flex;
-    flex-direction: column;
-    gap: 20px;
+.chart-subtitle {
+    text-align: center;
+    font-size: 1.4rem;
+    margin: 15px 0;
+    color: var(--primary-color);
 }
 
-.dashboard-tabs {
-    display: flex;
-    justify-content: center;
-    margin-bottom: 20px;
-}
-
-.tab-button {
-    padding: 12px 24px;
-    background-color: transparent;
-    border: none;
-    border-bottom: 2px solid var(--border-color);
-    font-size: 1rem;
-    font-weight: 600;
-    color: var(--text-color);
-    cursor: pointer;
-    transition: all 0.3s ease;
-}
-
-.tab-button:hover {
-    color: var(--secondary-color);
-}
-
-.tab-button.active {
-    border-bottom: 2px solid var(--secondary-color);
-    color: var(--secondary-color);
-}
-
-.metrics-container {
+/* Cartes pour afficher les valeurs crypto */
+.crypto-values-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    grid-template-columns: repeat(3, 1fr);
     gap: 20px;
     margin-bottom: 30px;
 }
 
-.metric-card {
+.crypto-value-card {
     background-color: var(--card-background);
-    padding: 20px;
+    padding: 15px;
     border-radius: 8px;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
     text-align: center;
     transition: transform 0.3s ease;
 }
 
-.metric-card:hover {
+.crypto-value-card:hover {
     transform: translateY(-5px);
 }
 
-.metric-card h3 {
-    font-size: 1.1rem;
-    margin-bottom: 10px;
-    color: var(--primary-color);
+.crypto-value-text {
+    font-size: 1.6rem;
+    font-weight: 600;
+    margin: 10px 0;
 }
 
-.metric-value {
-    font-size: 1.8rem;
-    font-weight: 700;
-    color: var(--secondary-color);
+.btc-text {
+    color: var(--btc-color);
 }
 
-.strategy-container {
+.eth-text {
+    color: var(--eth-color);
+}
+
+.doge-text {
+    color: var(--doge-color);
+}
+
+/* Conteneur de graphique qui n'interfère pas avec Chart.js */
+.chart-outer-container {
+    background-color: var(--card-background);
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    margin: 0 auto 30px;
+}
+
+/* Pour préserver les dimensions du graphique */
+.chart-inner-container {
+    position: relative;
+    width: 100%;
+    height: 100%;
+}
+
+/* Section des ratios */
+.ratios-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+    margin-bottom: 30px;
+}
+
+.ratio-value-card {
+    background-color: var(--card-background);
+    padding: 15px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    text-align: center;
+}
+
+.ratio-value-text {
+    font-size: 1.4rem;
+    font-weight: 600;
+    margin: 10px 0;
+}
+
+/* Section compte utilisateur */
+.user-account-section {
     background-color: var(--card-background);
     padding: 20px;
     border-radius: 8px;
@@ -103,68 +128,117 @@
     margin-bottom: 30px;
 }
 
-.strategy-container h3 {
-    font-size: 1.3rem;
-    margin-bottom: 15px;
-    color: var(--primary-color);
+.user-balance-display {
     text-align: center;
-}
-
-.strategy-text {
-    font-size: 1.2rem;
-    font-weight: 600;
+    font-size: 1.6rem;
+    font-weight: 700;
     color: var(--secondary-color);
-    text-align: center;
-    padding: 10px;
+    margin-bottom: 20px;
 }
 
-.investments-list, .history-container {
+/* Formulaire d'investissement */
+.investment-controls {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin-bottom: 30px;
+    flex-wrap: wrap;
+}
+
+.investment-select {
+    padding: 10px;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    font-size: 1rem;
+    cursor: pointer;
+}
+
+.investment-input {
+    padding: 10px;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    font-size: 1rem;
+    width: 100px;
+}
+
+.investment-button {
+    padding: 10px 20px;
+    background-color: var(--secondary-color);
+    color: white;
+    border: none;
+    border-radius: 4px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+.investment-button:hover {
+    background-color: var(--primary-color);
+}
+
+/* Vue des investissements */
+.investments-display {
+    display: flex;
+    justify-content: space-around;
+    margin-top: 30px;
+    flex-wrap: wrap;
+    gap: 20px;
+}
+
+.investments-list-container {
     background-color: var(--card-background);
     padding: 20px;
     border-radius: 8px;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    flex: 1;
+    min-width: 300px;
 }
 
-.investments-list h3, .history-container h3 {
-    font-size: 1.3rem;
-    margin-bottom: 15px;
-    color: var(--primary-color);
+.investments-list-container ul {
+    list-style-type: none;
+    padding: 0;
 }
 
-.investment-table, .history-table {
-    width: 100%;
-    border-collapse: collapse;
-    margin-top: 15px;
-}
-
-.investment-table th, .history-table th {
-    background-color: var(--primary-color);
-    color: white;
-    padding: 12px;
-    text-align: left;
-    font-weight: 600;
-}
-
-.investment-table td, .history-table td {
-    padding: 12px;
+.investment-item {
+    padding: 15px;
     border-bottom: 1px solid var(--border-color);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
 }
 
-.investment-table tr:hover, .history-table tr:hover {
-    background-color: rgba(59, 130, 246, 0.05);
+.investment-item:last-child {
+    border-bottom: none;
 }
 
-.positive-return {
-    color: var(--positive-color);
-    font-weight: 600;
+.recover-button {
+    padding: 8px 12px;
+    background-color: var(--negative-color);
+    color: white;
+    border: none;
+    border-radius: 4px;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
 }
 
-.negative-return {
-    color: var(--negative-color);
-    font-weight: 600;
+.recover-button:hover {
+    background-color: #dc2626;
 }
 
-.login-message {
+/* Conteneur graphique en camembert */
+.pie-chart-outer-container {
+    background-color: var(--card-background);
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    flex: 1;
+    min-width: 300px;
+}
+
+/* Message de connexion */
+.login-prompt {
     text-align: center;
     font-size: 1.2rem;
     padding: 40px;
@@ -173,13 +247,18 @@
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
 }
 
+/* Styles responsive */
 @media (max-width: 768px) {
-    .metrics-container {
+    .crypto-values-grid,
+    .ratios-grid {
         grid-template-columns: 1fr;
     }
 
-    .investment-table, .history-table {
-        display: block;
-        overflow-x: auto;
+    .investments-display {
+        flex-direction: column;
+    }
+
+    .chart-width-limiter {
+        width: 100% !important;
     }
 }

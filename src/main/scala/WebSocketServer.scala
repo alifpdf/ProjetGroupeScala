@@ -301,13 +301,16 @@ class WebSocketServer(implicit system: ActorSystem, ec: ExecutionContext) {
               case Success(products) =>
 
                 def computeRatio(company: String, currentPrice: BigDecimal): BigDecimal = {
-                  println("\n\n\n"+company+"\n"+currentPrice+"\n\n\n")
-                  if (currentPrice == 0) BigDecimal(0)
-                  else {
-                    val companyProducts = products.filter(_.entreprise == company)
-                    companyProducts.map(p => ((currentPrice-p.originalPrice) /p.originalPrice)*100).sum
+                  val companyProducts = products.filter(_.entreprise == company)
+
+                  if (companyProducts.nonEmpty) {
+                    val totalRendement = companyProducts.map(p => ((currentPrice - p.originalPrice) / p.originalPrice) * 100).sum
+                    totalRendement / companyProducts.length // 🔥 Division par le nombre d'investissements pour avoir la moyenne
+                  } else {
+                    BigDecimal(0) // ⚠️ Évite une division par 0 si aucun investissement
                   }
                 }
+
 
                 val btcTotal = computeRatio("BTC", btcPrice)
                 val ethTotal = computeRatio("ETH", ethPrice)

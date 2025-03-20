@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import "./InvestmentStrategies.css"; // Import CSS file
+import "./InvestmentStrategies.css";
 
 function InvestmentStrategies() {
     const [investments, setInvestments] = useState([]);
@@ -167,14 +167,14 @@ function InvestmentStrategies() {
 
     const getInvestmentStrategy = () => {
         if (sharpeRatio > 1 && volatility < 0.2) {
-            return "🔵 Stratégie Défensive : Investissez dans des actifs sûrs (obligations, blue chips).";
+            return <span style={{ color: "var(--secondary-color)" }}>Stratégie Défensive : Investissez dans des actifs sûrs (obligations, blue chips).</span>;
         } else if (sharpeRatio > 1.5) {
-            notifyStrategy("🟢 Stratégie Équilibrée : Mélangez actions, ETF et crypto pour diversifier.");
-            return "🟢 Stratégie Équilibrée : Mélangez actions, ETF et crypto pour diversifier.";
+            notifyStrategy("Stratégie Équilibrée : Mélangez actions, ETF et crypto pour diversifier.");
+            return <span style={{ color: "var(--positive-color)" }}>Stratégie Équilibrée : Mélangez actions, ETF et crypto pour diversifier.</span>;
         } else if (sharpeRatio < 1 && volatility > 0.3) {
-            return "🔴 Stratégie Agressive : Vous prenez trop de risques ! Diversifiez vos placements.";
+            return <span style={{ color: "var(--negative-color)" }}>Stratégie Agressive : Vous prenez trop de risques ! Diversifiez vos placements.</span>;
         } else {
-            return "⚪ Stratégie Neutre : Continuez à surveiller vos investissements.";
+            return <span style={{ color: "var(--text-color)" }}>Stratégie Neutre : Continuez à surveiller vos investissements.</span>;
         }
     };
 
@@ -341,23 +341,26 @@ function InvestmentStrategies() {
                                     <th>Date</th>
                                     <th>Actif</th>
                                     <th>Quantité</th>
-                                    <th>Prix</th>
+                                    <th>Prix Unitaire</th>
                                     <th>Montant Total</th>
                                 </tr>
                                 </thead>
                                 <tbody>
-                                {history.map((purchase, index) => (
-                                    <tr key={purchase.id || index}>
-                                        <td>{formatDate(purchase.created_at)}</td>
-                                        <td>{purchase.companyName}</td>
-                                        <td>{purchase.quantity}</td>
-                                        <td>{purchase.price/purchase.quantity}€</td>
-                                        <td>{safeToFixed(purchase.price)}€</td>
-                                    </tr>
-                                ))}
+                                {[...history] // crée une copie de history pour la triée
+                                    .sort((a, b) => new Date(b.created_at) - new Date(a.created_at)) // plus récent au plus ancien
+                                    .map((purchase, index) => (
+                                        <tr key={purchase.id || index}>
+                                            <td>{formatDate(purchase.created_at)}</td>
+                                            <td>{purchase.companyName}</td>
+                                            <td>{purchase.quantity}</td>
+                                            <td>{safeToFixed(purchase.price / purchase.quantity)}€</td>
+                                            <td>{safeToFixed(purchase.price)}€</td>
+                                        </tr>
+                                    ))}
                                 </tbody>
                             </table>
                         </div>
+
                     )}
                 </div>
             ) : (
